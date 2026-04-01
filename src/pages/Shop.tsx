@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 type Product = Tables<"products">;
 
-const categories = ["all", "watches", "bags", "jewelry", "accessories"];
+const categories = ["all", "watches", "bags", "jewelry", "accessories", "footwear", "clothes", "nightwear", "undies", "trousers", "shirts", "polo", "slippers", "shoes", "glasses", "others"];
 
 export default function Shop() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,31 +42,22 @@ export default function Shop() {
   return (
     <div className="container px-4 py-8 animate-fade-in">
       <h1 className="font-display text-3xl font-bold mb-6">Shop</h1>
-
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {categories.map(cat => (
-            <Button
-              key={cat}
-              variant={activeCategory === cat ? "default" : "outline"}
-              size="sm"
-              className="capitalize"
-              onClick={() => setSearchParams(cat === "all" ? {} : { category: cat })}
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
       </div>
-
+      <div className="flex gap-2 flex-wrap mb-8">
+        {categories.map(cat => (
+          <Button key={cat} variant={activeCategory === cat ? "default" : "outline"} size="sm" className="capitalize"
+            onClick={() => setSearchParams(cat === "all" ? {} : { category: cat })}>
+            {cat}
+          </Button>
+        ))}
+      </div>
       {filtered.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <p className="text-lg">No products found</p>
-        </div>
+        <div className="text-center py-20 text-muted-foreground"><p className="text-lg">No products found</p></div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filtered.map(p => <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} />)}

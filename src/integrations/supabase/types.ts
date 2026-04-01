@@ -106,6 +106,42 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          ends_at: string
+          id: string
+          image_url: string | null
+          promo_code: string | null
+          starts_at: string
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          ends_at: string
+          id?: string
+          image_url?: string | null
+          promo_code?: string | null
+          starts_at?: string
+          title: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          ends_at?: string
+          id?: string
+          image_url?: string | null
+          promo_code?: string | null
+          starts_at?: string
+          title?: string
+        }
+        Relationships: []
+      }
       negotiations: {
         Row: {
           admin_message: string | null
@@ -158,6 +194,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      order_tracking: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          order_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: []
       }
       orders: {
         Row: {
@@ -267,39 +360,99 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          badge: string
+          city: string | null
           created_at: string
           dob: string | null
           full_name: string
           id: string
+          landmark: string | null
+          lga: string | null
           phone: string | null
+          restricted: boolean
+          state: string | null
           status: string
           updated_at: string
           user_id: string
           username: string | null
+          warning_message: string | null
         }
         Insert: {
           address?: string | null
+          badge?: string
+          city?: string | null
           created_at?: string
           dob?: string | null
           full_name?: string
           id?: string
+          landmark?: string | null
+          lga?: string | null
           phone?: string | null
+          restricted?: boolean
+          state?: string | null
           status?: string
           updated_at?: string
           user_id: string
           username?: string | null
+          warning_message?: string | null
         }
         Update: {
           address?: string | null
+          badge?: string
+          city?: string | null
           created_at?: string
           dob?: string | null
           full_name?: string
           id?: string
+          landmark?: string | null
+          lga?: string | null
           phone?: string | null
+          restricted?: boolean
+          state?: string | null
           status?: string
           updated_at?: string
           user_id?: string
           username?: string | null
+          warning_message?: string | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          delivery_comment: string | null
+          delivery_rating: number | null
+          id: string
+          image_url: string | null
+          order_id: string
+          product_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          delivery_comment?: string | null
+          delivery_rating?: number | null
+          id?: string
+          image_url?: string | null
+          order_id: string
+          product_id: string
+          rating?: number
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          delivery_comment?: string | null
+          delivery_rating?: number | null
+          id?: string
+          image_url?: string | null
+          order_id?: string
+          product_id?: string
+          rating?: number
+          user_id?: string
         }
         Relationships: []
       }

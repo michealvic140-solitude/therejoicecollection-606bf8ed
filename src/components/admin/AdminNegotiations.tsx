@@ -4,7 +4,6 @@ import { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPrice } from "@/lib/format";
 import { toast } from "sonner";
@@ -14,19 +13,35 @@ type Negotiation = Tables<"negotiations">;
 export function AdminNegotiations() {
   const [items, setItems] = useState<Negotiation[]>([]);
 
-  const fetch = async () => {
+  const fetchAll = async () => {
     const { data } = await supabase.from("negotiations").select("*").order("created_at", { ascending: false });
     if (data) setItems(data);
   };
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetchAll(); }, []);
 
-  const updateNeg = async (id: string, status: string, counterOffer?: string) => {
+  const updateNeg = async (neg: Negotiation, status: string, counterOffer?: string) => {
     const update: any = { status };
     if (counterOffer) update.counter_offer = parseFloat(counterOffer);
-    await supabase.from("negotiations").update(update).eq("id", id);
+    await supabase.from("negotiations").update(update).eq("id", neg.id);
+
+    // Send notification
+    const messages: Record<string, string> = {
+      Accepted: `Your negotiation for ${neg.product_name} at ${formatPrice(neg.offered_price)} has been accepted!`,
+      Rejected: `Your negotiation for ${neg.product_name} was rejected.`,
+      "Counter Offered": `You received a counter offer for ${neg.product_name}: ${counterOffer ? formatPrice(parseFloat(counterOffer)) : ""}`,
+    };
+
+    await supabase.from("notifications").insert({
+      user_id: neg.user_id,
+      title: `Negotiation ${status}`,
+      message: messages[status] || `Negotiation status updated to ${status}`,
+      type: status === "Accepted" ? "success" : status === "Rejected" ? "error" : "info",
+      link: `/product/${neg.product_id}`,
+    } as any);
+
     toast.success("Updated");
-    fetch();
+    fetchAll();
   };
 
   return (
@@ -49,11 +64,11 @@ export function AdminNegotiations() {
             </div>
             {n.status === "Pending" && (
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => updateNeg(n.id, "Accepted")}>Accept</Button>
-                <Button size="sm" variant="destructive" onClick={() => updateNeg(n.id, "Rejected")}>Reject</Button>
+                <Button size="sm" onClick={() => updateNeg(n, "Accepted")}>Accept</Button>
+                <Button size="sm" variant="destructive" onClick={() => updateNeg(n, "Rejected")}>Reject</Button>
                 <Button size="sm" variant="outline" onClick={() => {
                   const offer = prompt("Enter counter offer:");
-                  if (offer) updateNeg(n.id, "Counter Offered", offer);
+                  if (offer) updateNeg(n, "Counter Offered", offer);
                 }}>Counter</Button>
               </div>
             )}
