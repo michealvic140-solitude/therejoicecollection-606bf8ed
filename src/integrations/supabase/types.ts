@@ -256,8 +256,10 @@ export type Database = {
         Row: {
           cancellation_reason: string | null
           created_at: string
+          delivery_method: string
           id: string
           items: Json
+          pickup_location: string | null
           readjust_message: string | null
           readjusted_at: string | null
           refund_admin_note: string | null
@@ -276,8 +278,10 @@ export type Database = {
         Insert: {
           cancellation_reason?: string | null
           created_at?: string
+          delivery_method?: string
           id?: string
           items?: Json
+          pickup_location?: string | null
           readjust_message?: string | null
           readjusted_at?: string | null
           refund_admin_note?: string | null
@@ -296,8 +300,10 @@ export type Database = {
         Update: {
           cancellation_reason?: string | null
           created_at?: string
+          delivery_method?: string
           id?: string
           items?: Json
+          pickup_location?: string | null
           readjust_message?: string | null
           readjusted_at?: string | null
           refund_admin_note?: string | null
