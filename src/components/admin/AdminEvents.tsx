@@ -42,7 +42,7 @@ export function AdminEvents() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.ends_at) { toast.error("End date is required"); return; }
-    await supabase.from("events").insert({
+    const { error } = await supabase.from("events").insert({
       title: form.title,
       description: form.description,
       image_url: form.image_url,
@@ -50,7 +50,8 @@ export function AdminEvents() {
       starts_at: new Date(form.starts_at).toISOString(),
       ends_at: new Date(form.ends_at).toISOString(),
       active: form.active,
-    } as any);
+    });
+    if (error) { toast.error("Failed to create event: " + error.message); return; }
     toast.success("Event created");
     setOpen(false);
     setForm({ title: "", description: "", image_url: "", promo_code: "", starts_at: new Date().toISOString().slice(0, 16), ends_at: "", active: true });
