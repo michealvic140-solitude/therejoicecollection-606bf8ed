@@ -27,7 +27,6 @@ export function AdminPayments() {
 
   const approvePayment = async (order: Order) => {
     await supabase.from("orders").update({ status: "Payment Confirmed" }).eq("id", order.id);
-    // Send notification to user
     await supabase.from("notifications").insert({
       user_id: order.user_id,
       title: "Payment Approved",
@@ -54,7 +53,10 @@ export function AdminPayments() {
     fetchOrders();
   };
 
-  const paymentOrders = orders.filter(o => o.screenshot_url);
+  // Show orders that have screenshot proof OR are in Pending Payment status
+  const paymentOrders = orders.filter(o =>
+    (o.screenshot_url && o.screenshot_url.trim() !== "") || o.status === "Pending Payment"
+  );
 
   return (
     <div className="space-y-4">
@@ -63,47 +65,57 @@ export function AdminPayments() {
       </h2>
 
       {paymentOrders.length === 0 && (
-        <p className="text-muted-foreground text-sm">No payment screenshots submitted yet.</p>
+        <p className="text-muted-foreground text-sm">No pending payments.</p>
       )}
 
-      {paymentOrders.map(order => (
-        <Card key={order.id}>
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <span className="font-mono font-bold">{order.id}</span>
-                <span className="text-sm text-muted-foreground ml-2">by {order.user_name}</span>
+      {paymentOrders.map(order => {
+        const hasScreenshot = order.screenshot_url && order.screenshot_url.trim() !== "";
+        return (
+          <Card key={order.id}>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <span className="font-mono font-bold">{order.id}</span>
+                  <span className="text-sm text-muted-foreground ml-2">by {order.user_name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasScreenshot ? (
+                    <Badge className="bg-green-100 text-green-800">Proof Uploaded</Badge>
+                  ) : (
+                    <Badge className="bg-yellow-100 text-yellow-800">No Proof</Badge>
+                  )}
+                  <Badge className={order.status === "Payment Confirmed" ? "bg-green-100 text-green-800" : order.status === "Pending Payment" ? "bg-yellow-100 text-yellow-800" : ""}>
+                    {order.status}
+                  </Badge>
+                </div>
               </div>
-              <Badge className={order.status === "Payment Confirmed" ? "bg-green-100 text-green-800" : order.status === "Pending Payment" ? "bg-yellow-100 text-yellow-800" : ""}>
-                {order.status}
-              </Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-primary">{formatPrice(order.total)}</span>
-              <div className="flex gap-2">
-                {order.screenshot_url && (
-                  <Button variant="outline" size="sm" className="gap-1" onClick={() => setViewImage(order.screenshot_url)}>
-                    <Eye className="h-4 w-4" /> View Proof
-                  </Button>
-                )}
-                {order.status === "Pending Payment" && (
-                  <>
-                    <Button size="sm" className="gap-1" onClick={() => approvePayment(order)}>
-                      <Check className="h-4 w-4" /> Approve
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-primary">{formatPrice(order.total)}</span>
+                <div className="flex gap-2">
+                  {hasScreenshot && (
+                    <Button variant="outline" size="sm" className="gap-1" onClick={() => setViewImage(order.screenshot_url)}>
+                      <Eye className="h-4 w-4" /> View Proof
                     </Button>
-                    <Button size="sm" variant="destructive" className="gap-1" onClick={() => setDecliningId(order.id)}>
-                      <X className="h-4 w-4" /> Decline
-                    </Button>
-                  </>
-                )}
+                  )}
+                  {order.status === "Pending Payment" && (
+                    <>
+                      <Button size="sm" className="gap-1" onClick={() => approvePayment(order)}>
+                        <Check className="h-4 w-4" /> Approve
+                      </Button>
+                      <Button size="sm" variant="destructive" className="gap-1" onClick={() => setDecliningId(order.id)}>
+                        <X className="h-4 w-4" /> Decline
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-            {order.cancellation_reason && (
-              <p className="text-sm text-destructive">Decline reason: {order.cancellation_reason}</p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              {order.cancellation_reason && (
+                <p className="text-sm text-destructive">Decline reason: {order.cancellation_reason}</p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* View Image Dialog */}
       <Dialog open={!!viewImage} onOpenChange={() => setViewImage(null)}>

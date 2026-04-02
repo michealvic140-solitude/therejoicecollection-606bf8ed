@@ -10,14 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatPrice } from "@/lib/format";
-import { Send, Eye, Shield, Ban, AlertTriangle, Star, MessageSquare } from "lucide-react";
+import { Send, Eye, Ban, AlertTriangle, MessageSquare, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
-type Profile = Tables<"profiles"> & { state?: string; city?: string; lga?: string; landmark?: string; badge?: string; warning_message?: string; restricted?: boolean };
+type Profile = Tables<"profiles">;
 
 export function AdminUsers() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [editUser, setEditUser] = useState<Profile | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", username: "", phone: "", address: "", state: "", city: "", lga: "", landmark: "", dob: "" });
   const [msgDialog, setMsgDialog] = useState<string | null>(null);
   const [broadcastDialog, setBroadcastDialog] = useState(false);
   const [message, setMessage] = useState("");
@@ -26,7 +28,7 @@ export function AdminUsers() {
 
   const fetchUsers = async () => {
     const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-    if (data) setUsers(data as Profile[]);
+    if (data) setUsers(data);
   };
 
   useEffect(() => { fetchUsers(); }, []);
@@ -35,11 +37,9 @@ export function AdminUsers() {
     await supabase.from("profiles").update({ status } as any).eq("user_id", userId);
     if (status === "Banned") {
       await supabase.from("notifications").insert({
-        user_id: userId,
-        title: "Account Banned",
+        user_id: userId, title: "Account Banned",
         message: "Your account has been banned. Please contact support for more information.",
-        type: "error",
-        link: "/chat",
+        type: "error", link: "/chat",
       } as any);
     }
     toast.success(`User status updated to ${status}`);
@@ -53,7 +53,7 @@ export function AdminUsers() {
   };
 
   const toggleRestriction = async (user: Profile) => {
-    const restricted = !(user as any).restricted;
+    const restricted = !user.restricted;
     await supabase.from("profiles").update({ restricted } as any).eq("user_id", user.user_id);
     await supabase.from("notifications").insert({
       user_id: user.user_id,
@@ -68,10 +68,7 @@ export function AdminUsers() {
   const sendWarning = async (userId: string, warning: string) => {
     await supabase.from("profiles").update({ warning_message: warning } as any).eq("user_id", userId);
     await supabase.from("notifications").insert({
-      user_id: userId,
-      title: "⚠️ Warning",
-      message: warning,
-      type: "warning",
+      user_id: userId, title: "⚠️ Warning", message: warning, type: "warning",
     } as any);
     toast.success("Warning sent");
   };
@@ -79,36 +76,58 @@ export function AdminUsers() {
   const sendPrivateMessage = async (userId: string) => {
     if (!message.trim()) return;
     await supabase.from("notifications").insert({
-      user_id: userId,
-      title: msgTitle || "Message from Admin",
-      message: message,
-      type: "info",
+      user_id: userId, title: msgTitle || "Message from Admin", message, type: "info",
     } as any);
     toast.success("Message sent");
-    setMsgDialog(null);
-    setMessage("");
-    setMsgTitle("");
+    setMsgDialog(null); setMessage(""); setMsgTitle("");
   };
 
   const broadcastMessage = async () => {
     if (!message.trim()) return;
-    const inserts = users.map(u => ({
-      user_id: u.user_id,
-      title: msgTitle || "Announcement",
-      message: message,
-      type: "info" as const,
-    }));
+    const inserts = users.map(u => ({ user_id: u.user_id, title: msgTitle || "Announcement", message, type: "info" as const }));
     await supabase.from("notifications").insert(inserts as any);
     toast.success(`Message sent to ${users.length} users`);
-    setBroadcastDialog(false);
-    setMessage("");
-    setMsgTitle("");
+    setBroadcastDialog(false); setMessage(""); setMsgTitle("");
   };
 
   const viewUserProfile = async (user: Profile) => {
     setSelectedUser(user);
     const { data } = await supabase.from("orders").select("*").eq("user_id", user.user_id).order("created_at", { ascending: false });
     setUserOrders(data || []);
+  };
+
+  const openEditProfile = (user: Profile) => {
+    setEditUser(user);
+    setEditForm({
+      full_name: user.full_name || "",
+      username: user.username || "",
+      phone: user.phone || "",
+      address: user.address || "",
+      state: user.state || "",
+      city: user.city || "",
+      lga: user.lga || "",
+      landmark: user.landmark || "",
+      dob: user.dob || "",
+    });
+  };
+
+  const saveEditProfile = async () => {
+    if (!editUser) return;
+    const { error } = await supabase.from("profiles").update({
+      full_name: editForm.full_name,
+      username: editForm.username,
+      phone: editForm.phone,
+      address: editForm.address,
+      state: editForm.state,
+      city: editForm.city,
+      lga: editForm.lga,
+      landmark: editForm.landmark,
+      dob: editForm.dob || null,
+    } as any).eq("user_id", editUser.user_id);
+    if (error) { toast.error("Failed to update: " + error.message); return; }
+    toast.success("Profile updated");
+    setEditUser(null);
+    fetchUsers();
   };
 
   const badgeColors: Record<string, string> = {
@@ -135,9 +154,9 @@ export function AdminUsers() {
                   <p className="font-semibold">{u.full_name || "No name"}</p>
                   <p className="text-sm text-muted-foreground">{u.username || "No username"} · {u.phone || "No phone"}</p>
                 </div>
-                <Badge className={badgeColors[(u as any).badge || "Regular"]}>{(u as any).badge || "Regular"}</Badge>
+                <Badge className={badgeColors[u.badge || "Regular"]}>{u.badge || "Regular"}</Badge>
                 {u.status === "Banned" && <Badge variant="destructive">Banned</Badge>}
-                {(u as any).restricted && <Badge variant="secondary">Restricted</Badge>}
+                {u.restricted && <Badge variant="secondary">Restricted</Badge>}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <Select value={u.status} onValueChange={v => updateStatus(u.user_id, v)}>
@@ -148,7 +167,7 @@ export function AdminUsers() {
                     <SelectItem value="Frozen">Frozen</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={(u as any).badge || "Regular"} onValueChange={v => updateBadge(u.user_id, v)}>
+                <Select value={u.badge || "Regular"} onValueChange={v => updateBadge(u.user_id, v)}>
                   <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Regular">Regular</SelectItem>
@@ -156,7 +175,7 @@ export function AdminUsers() {
                     <SelectItem value="Verified">Verified</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="icon" onClick={() => toggleRestriction(u)} title={`${(u as any).restricted ? "Unrestrict" : "Restrict"}`}>
+                <Button variant="outline" size="icon" onClick={() => toggleRestriction(u)} title={`${u.restricted ? "Unrestrict" : "Restrict"}`}>
                   <Ban className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="icon" onClick={() => {
@@ -168,6 +187,9 @@ export function AdminUsers() {
                 <Button variant="outline" size="icon" onClick={() => setMsgDialog(u.user_id)} title="Private Message">
                   <MessageSquare className="h-4 w-4" />
                 </Button>
+                <Button variant="outline" size="icon" onClick={() => openEditProfile(u)} title="Edit Profile">
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" size="icon" onClick={() => viewUserProfile(u)} title="View Profile">
                   <Eye className="h-4 w-4" />
                 </Button>
@@ -176,6 +198,27 @@ export function AdminUsers() {
           </CardContent>
         </Card>
       ))}
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-display">Edit User Profile</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><Label>Full Name</Label><Input value={editForm.full_name} onChange={e => setEditForm({...editForm, full_name: e.target.value})} /></div>
+            <div className="space-y-1"><Label>Username</Label><Input value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} /></div>
+            <div className="space-y-1"><Label>Phone</Label><Input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} /></div>
+            <div className="space-y-1"><Label>Date of Birth</Label><Input type="date" value={editForm.dob} onChange={e => setEditForm({...editForm, dob: e.target.value})} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label>State</Label><Input value={editForm.state} onChange={e => setEditForm({...editForm, state: e.target.value})} /></div>
+              <div className="space-y-1"><Label>City</Label><Input value={editForm.city} onChange={e => setEditForm({...editForm, city: e.target.value})} /></div>
+              <div className="space-y-1"><Label>LGA</Label><Input value={editForm.lga} onChange={e => setEditForm({...editForm, lga: e.target.value})} /></div>
+              <div className="space-y-1"><Label>Landmark</Label><Input value={editForm.landmark} onChange={e => setEditForm({...editForm, landmark: e.target.value})} /></div>
+            </div>
+            <div className="space-y-1"><Label>Full Address</Label><Input value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} /></div>
+            <Button onClick={saveEditProfile} className="w-full">Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Private Message Dialog */}
       <Dialog open={!!msgDialog} onOpenChange={() => setMsgDialog(null)}>
@@ -212,10 +255,10 @@ export function AdminUsers() {
                 <div><strong>Username:</strong> {selectedUser.username || "—"}</div>
                 <div><strong>Phone:</strong> {selectedUser.phone || "—"}</div>
                 <div><strong>Status:</strong> {selectedUser.status}</div>
-                <div><strong>Badge:</strong> {(selectedUser as any).badge || "Regular"}</div>
+                <div><strong>Badge:</strong> {selectedUser.badge || "Regular"}</div>
                 <div><strong>DOB:</strong> {selectedUser.dob || "—"}</div>
-                <div className="col-span-2"><strong>State:</strong> {(selectedUser as any).state || "—"} · <strong>City:</strong> {(selectedUser as any).city || "—"}</div>
-                <div className="col-span-2"><strong>LGA:</strong> {(selectedUser as any).lga || "—"} · <strong>Landmark:</strong> {(selectedUser as any).landmark || "—"}</div>
+                <div className="col-span-2"><strong>State:</strong> {selectedUser.state || "—"} · <strong>City:</strong> {selectedUser.city || "—"}</div>
+                <div className="col-span-2"><strong>LGA:</strong> {selectedUser.lga || "—"} · <strong>Landmark:</strong> {selectedUser.landmark || "—"}</div>
                 <div className="col-span-2"><strong>Address:</strong> {selectedUser.address || "—"}</div>
               </div>
               <div>

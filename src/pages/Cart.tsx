@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatPrice } from "@/lib/format";
-import { Minus, Plus, Trash2, ShoppingBag, Upload, MapPin } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, Upload, MapPin, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
@@ -20,6 +21,8 @@ export default function Cart() {
   const [confirmAddress, setConfirmAddress] = useState(false);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">("delivery");
+  const [pickupLocation, setPickupLocation] = useState("");
   const [address, setAddress] = useState({
     state: "", city: "", lga: "", landmark: "", full_address: ""
   });
@@ -46,7 +49,6 @@ export default function Cart() {
     }
   }, [profile]);
 
-  // Check if user is restricted
   if ((profile as any)?.restricted) {
     return (
       <div className="container px-4 py-20 text-center animate-fade-in">
@@ -61,15 +63,20 @@ export default function Cart() {
   const handleCheckout = async () => {
     if (!user || !profile) return;
 
-    // Validate address
-    if (!address.state || !address.city || !address.full_address) {
-      toast.error("Please fill in your delivery address");
-      return;
+    if (deliveryMethod === "delivery") {
+      if (!address.state || !address.city || !address.full_address) {
+        toast.error("Please fill in your delivery address");
+        return;
+      }
+    } else {
+      if (!pickupLocation.trim()) {
+        toast.error("Please enter your preferred pickup location");
+        return;
+      }
     }
 
     setUploading(true);
 
-    // Upload screenshot if provided
     let screenshotUrl = "";
     if (screenshotFile) {
       const fileName = `${user.id}/${Date.now()}-${screenshotFile.name}`;
@@ -83,14 +90,15 @@ export default function Cart() {
       screenshotUrl = urlData.publicUrl;
     }
 
-    // Save address to profile
-    await supabase.from("profiles").update({
-      address: address.full_address,
-      state: address.state,
-      city: address.city,
-      lga: address.lga,
-      landmark: address.landmark,
-    } as any).eq("user_id", user.id);
+    if (deliveryMethod === "delivery") {
+      await supabase.from("profiles").update({
+        address: address.full_address,
+        state: address.state,
+        city: address.city,
+        lga: address.lga,
+        landmark: address.landmark,
+      } as any).eq("user_id", user.id);
+    }
 
     const orderItems = items.map(item => ({
       productId: item.product_id,
@@ -104,9 +112,11 @@ export default function Cart() {
       user_name: profile.full_name,
       items: orderItems,
       total,
-      status: screenshotUrl ? "Pending Payment" : "Pending Payment",
+      status: "Pending Payment",
       screenshot_url: screenshotUrl,
-    });
+      delivery_method: deliveryMethod,
+      pickup_location: deliveryMethod === "pickup" ? pickupLocation : "",
+    } as any);
 
     setUploading(false);
     if (error) { toast.error("Failed to place order"); return; }
@@ -186,7 +196,6 @@ export default function Cart() {
                     <p>Number: {bankInfo.account_number || "—"}</p>
                   </div>
 
-                  {/* Payment Screenshot */}
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1"><Upload className="h-4 w-4" /> Payment Proof (screenshot)</Label>
                     <Input type="file" accept="image/*" onChange={e => setScreenshotFile(e.target.files?.[0] || null)} />
@@ -199,19 +208,51 @@ export default function Cart() {
                 </div>
               )}
 
-              {/* Address Confirmation Dialog */}
+              {/* Address / Pickup Confirmation */}
               {confirmAddress && (
                 <div className="space-y-4 border-t pt-4">
-                  <h4 className="font-semibold flex items-center gap-1"><MapPin className="h-4 w-4" /> Delivery Address</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label className="text-xs">State *</Label><Input value={address.state} onChange={e => setAddress({...address, state: e.target.value})} placeholder="Lagos" /></div>
-                    <div className="space-y-1"><Label className="text-xs">City *</Label><Input value={address.city} onChange={e => setAddress({...address, city: e.target.value})} placeholder="Ikeja" /></div>
-                    <div className="space-y-1"><Label className="text-xs">LGA</Label><Input value={address.lga} onChange={e => setAddress({...address, lga: e.target.value})} placeholder="Ikeja" /></div>
-                    <div className="space-y-1"><Label className="text-xs">Nearest Landmark</Label><Input value={address.landmark} onChange={e => setAddress({...address, landmark: e.target.value})} placeholder="Near..." /></div>
-                  </div>
-                  <div className="space-y-1"><Label className="text-xs">Full Address *</Label><Input value={address.full_address} onChange={e => setAddress({...address, full_address: e.target.value})} placeholder="Full home address" /></div>
+                  <h4 className="font-semibold">How would you like to receive your order?</h4>
+                  <RadioGroup value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as "delivery" | "pickup")} className="space-y-3">
+                    <div className="flex items-center space-x-2 border rounded-lg p-3">
+                      <RadioGroupItem value="delivery" id="delivery" />
+                      <Label htmlFor="delivery" className="flex items-center gap-2 cursor-pointer flex-1">
+                        <MapPin className="h-4 w-4" /> Delivery to my address
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 border rounded-lg p-3">
+                      <RadioGroupItem value="pickup" id="pickup" />
+                      <Label htmlFor="pickup" className="flex items-center gap-2 cursor-pointer flex-1">
+                        <Store className="h-4 w-4" /> I'll pick up
+                      </Label>
+                    </div>
+                  </RadioGroup>
+
+                  {deliveryMethod === "delivery" && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold flex items-center gap-1 text-sm"><MapPin className="h-4 w-4" /> Delivery Address</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1"><Label className="text-xs">State *</Label><Input value={address.state} onChange={e => setAddress({...address, state: e.target.value})} placeholder="Lagos" /></div>
+                        <div className="space-y-1"><Label className="text-xs">City *</Label><Input value={address.city} onChange={e => setAddress({...address, city: e.target.value})} placeholder="Ikeja" /></div>
+                        <div className="space-y-1"><Label className="text-xs">LGA</Label><Input value={address.lga} onChange={e => setAddress({...address, lga: e.target.value})} placeholder="Ikeja" /></div>
+                        <div className="space-y-1"><Label className="text-xs">Nearest Landmark</Label><Input value={address.landmark} onChange={e => setAddress({...address, landmark: e.target.value})} placeholder="Near..." /></div>
+                      </div>
+                      <div className="space-y-1"><Label className="text-xs">Full Address *</Label><Input value={address.full_address} onChange={e => setAddress({...address, full_address: e.target.value})} placeholder="Full home address" /></div>
+                    </div>
+                  )}
+
+                  {deliveryMethod === "pickup" && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold flex items-center gap-1 text-sm"><Store className="h-4 w-4" /> Pickup Location</h4>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Your preferred pickup location *</Label>
+                        <Input value={pickupLocation} onChange={e => setPickupLocation(e.target.value)} placeholder="Enter area or location you'd like to pick up from" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">We'll confirm the exact pickup point after your order is placed.</p>
+                    </div>
+                  )}
+
                   <Button className="w-full" onClick={() => { setConfirmAddress(false); setShowCheckout(true); }}>
-                    Confirm Address & Continue
+                    Confirm & Continue
                   </Button>
                 </div>
               )}
