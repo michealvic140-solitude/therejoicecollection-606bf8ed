@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPrice } from "@/lib/format";
-import { Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 type Product = Tables<"products">;
@@ -28,6 +28,8 @@ export function AdminProducts() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState({ name: "", description: "", price: "", category: "watches", image_url: "", shipping: true, visible: true });
   const [customTag, setCustomTag] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const fetchProducts = async () => {
     const { data } = await supabase.from("products").select("*").order("created_at", { ascending: false });
@@ -40,6 +42,7 @@ export function AdminProducts() {
     setForm({ name: "", description: "", price: "", category: "watches", image_url: "", shipping: true, visible: true });
     setEditing(null);
     setCustomTag("");
+    setImageFile(null);
   };
 
   const openEdit = (p: Product) => {
@@ -50,15 +53,36 @@ export function AdminProducts() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
+
+    let imageUrl = form.image_url;
+
+    // Upload image file if provided
+    if (imageFile) {
+      const fileName = `products/${Date.now()}-${imageFile.name}`;
+      const { error: uploadError } = await supabase.storage.from("uploads").upload(fileName, imageFile);
+      if (uploadError) {
+        toast.error("Failed to upload image: " + uploadError.message);
+        setUploading(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("uploads").getPublicUrl(fileName);
+      imageUrl = urlData.publicUrl;
+    }
+
     const category = customTag.trim() || form.category;
-    const data = { ...form, category, price: parseFloat(form.price) };
+    const data = { ...form, category, price: parseFloat(form.price), image_url: imageUrl };
+
     if (editing) {
-      await supabase.from("products").update(data).eq("id", editing.id);
+      const { error } = await supabase.from("products").update(data).eq("id", editing.id);
+      if (error) { toast.error("Failed to update: " + error.message); setUploading(false); return; }
       toast.success("Product updated");
     } else {
-      await supabase.from("products").insert(data);
+      const { error } = await supabase.from("products").insert(data);
+      if (error) { toast.error("Failed to add: " + error.message); setUploading(false); return; }
       toast.success("Product added");
     }
+    setUploading(false);
     setOpen(false);
     resetForm();
     fetchProducts();
@@ -121,10 +145,25 @@ export function AdminProducts() {
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Custom Tag (overrides category)</Label><Input value={customTag} onChange={e => setCustomTag(e.target.value)} placeholder="Or type a custom category..." /></div>
-                <div className="space-y-2"><Label>Image URL</Label><Input value={form.image_url} onChange={e => setForm({...form, image_url: e.target.value})} placeholder="https://..." /></div>
+                
+                {/* Image: URL or Upload */}
+                <div className="space-y-2">
+                  <Label>Product Image</Label>
+                  <Input value={form.image_url} onChange={e => { setForm({...form, image_url: e.target.value}); setImageFile(null); }} placeholder="Paste image URL..." />
+                  <div className="text-xs text-muted-foreground text-center">— or —</div>
+                  <div className="flex items-center gap-2">
+                    <Input type="file" accept="image/*" onChange={e => {
+                      const file = e.target.files?.[0] || null;
+                      setImageFile(file);
+                      if (file) setForm({...form, image_url: ""});
+                    }} />
+                    {imageFile && <Badge variant="secondary" className="gap-1 whitespace-nowrap"><Upload className="h-3 w-3" /> {imageFile.name.slice(0, 20)}</Badge>}
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between"><Label>Free Shipping</Label><Switch checked={form.shipping} onCheckedChange={v => setForm({...form, shipping: v})} /></div>
                 <div className="flex items-center justify-between"><Label>Visible</Label><Switch checked={form.visible} onCheckedChange={v => setForm({...form, visible: v})} /></div>
-                <Button type="submit" className="w-full">{editing ? "Update" : "Add"} Product</Button>
+                <Button type="submit" className="w-full" disabled={uploading}>{uploading ? "Saving..." : editing ? "Update" : "Add"} Product</Button>
               </form>
             </DialogContent>
           </Dialog>
