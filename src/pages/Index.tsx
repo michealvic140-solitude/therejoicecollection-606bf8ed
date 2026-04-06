@@ -5,10 +5,11 @@ import { Tables } from "@/integrations/supabase/types";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProductCard } from "@/components/ProductCard";
+import { SpinWheel } from "@/components/SpinWheel";
+import { PopupAd } from "@/components/PopupAd";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Crown, ArrowRight, Sparkles, ShieldCheck, Truck, HeadphonesIcon, Gift } from "lucide-react";
+import { Crown, ArrowRight, ShieldCheck, Truck, HeadphonesIcon, Gift, Watch, ShoppingBag, Gem, Sparkles, Footprints, Shirt } from "lucide-react";
 import { toast } from "sonner";
 
 type Product = Tables<"products">;
@@ -51,11 +52,11 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
   return (
     <div className="flex gap-3 justify-center">
       {blocks.map(b => (
-        <div key={b.label} className="bg-background/20 backdrop-blur-md rounded-xl px-4 py-3 text-center min-w-[70px] border border-white/10">
-          <div className="font-display text-3xl md:text-4xl font-bold text-white">
+        <div key={b.label} className="glass rounded-xl px-4 py-3 text-center min-w-[70px]">
+          <div className="font-display text-3xl md:text-4xl font-bold text-gold">
             {String(b.value).padStart(2, "0")}
           </div>
-          <div className="text-[10px] font-semibold tracking-widest text-white/70 mt-1">{b.label}</div>
+          <div className="text-[10px] font-semibold tracking-widest text-muted-foreground mt-1">{b.label}</div>
         </div>
       ))}
     </div>
@@ -63,11 +64,20 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
 }
 
 const tagColors: Record<string, string> = {
-  ANNOUNCEMENT: "bg-blue-500",
-  "NEW ARRIVAL": "bg-green-500",
-  SALE: "bg-red-500",
-  UPDATE: "bg-purple-500",
+  ANNOUNCEMENT: "bg-blue-500/80",
+  "NEW ARRIVAL": "bg-emerald-500/80",
+  SALE: "bg-red-500/80",
+  UPDATE: "bg-purple-500/80",
   PROMO: "bg-gold",
+};
+
+const categoryIcons: Record<string, typeof Watch> = {
+  watches: Watch,
+  bags: ShoppingBag,
+  jewelry: Gem,
+  accessories: Sparkles,
+  footwear: Footprints,
+  clothes: Shirt,
 };
 
 export default function Index() {
@@ -99,34 +109,37 @@ export default function Index() {
   };
 
   const categories = [
-    { name: "watches", icon: "⌚" },
-    { name: "bags", icon: "👜" },
-    { name: "jewelry", icon: "💎" },
-    { name: "accessories", icon: "✨" },
-    { name: "footwear", icon: "👟" },
-    { name: "clothes", icon: "👔" },
+    { name: "watches", icon: Watch },
+    { name: "bags", icon: ShoppingBag },
+    { name: "jewelry", icon: Gem },
+    { name: "accessories", icon: Sparkles },
+    { name: "footwear", icon: Footprints },
+    { name: "clothes", icon: Shirt },
   ];
 
   return (
     <div className="animate-fade-in">
+      <SpinWheel />
+      <PopupAd />
+
       {/* Countdown Event Banner */}
       {event && (
         <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/90 to-gold animate-pulse" style={{ animationDuration: "4s" }} />
-          <div className="absolute inset-0 backdrop-blur-sm bg-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-gold/20 via-gold/10 to-transparent" />
+          <div className="absolute inset-0 glass" />
           <div className="relative container px-4 py-8 md:py-12">
             <div className="max-w-3xl mx-auto text-center space-y-4">
               <div className="flex justify-center">
-                <Badge className="bg-white/20 text-white border-white/30 gap-1 px-4 py-1.5">
+                <Badge className="gradient-gold text-primary-foreground gap-1 px-4 py-1.5">
                   <Gift className="h-3.5 w-3.5" /> Special Event
                 </Badge>
               </div>
-              <h2 className="font-display text-2xl md:text-4xl font-bold text-white">{event.title}</h2>
-              <p className="text-white/80 text-sm md:text-base max-w-xl mx-auto">{event.description}</p>
+              <h2 className="font-display text-2xl md:text-4xl font-bold">{event.title}</h2>
+              <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">{event.description}</p>
               {event.promo_code && (
-                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-lg px-6 py-2 border border-white/20">
-                  <span className="text-white/70 text-sm">Promo Code:</span>
-                  <span className="font-mono font-bold text-white text-lg tracking-wider">{event.promo_code}</span>
+                <div className="inline-flex items-center gap-2 glass rounded-lg px-6 py-2">
+                  <span className="text-muted-foreground text-sm">Promo Code:</span>
+                  <span className="font-mono font-bold text-gold text-lg tracking-wider">{event.promo_code}</span>
                 </div>
               )}
               <CountdownTimer endsAt={event.ends_at} />
@@ -139,31 +152,33 @@ export default function Index() {
       )}
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-gold/5 py-20 md:py-32">
-        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B8860B' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+      <section className="relative overflow-hidden py-20 md:py-32">
+        <div className="absolute inset-0 bg-gradient-to-br from-gold/5 via-transparent to-gold/3" />
+        <div className="absolute top-20 right-10 w-72 h-72 bg-gold/10 rounded-full blur-[100px] animate-float" />
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-gold/5 rounded-full blur-[120px]" />
         <div className="container px-4 relative">
           <div className="max-w-2xl mx-auto text-center space-y-6">
             <div className="flex justify-center">
-              <Badge variant="secondary" className="gap-1.5 px-4 py-1.5 text-sm border border-gold/20">
+              <Badge variant="secondary" className="gap-1.5 px-4 py-1.5 text-sm glass border-gold/20">
                 <Sparkles className="h-3.5 w-3.5 text-gold" /> Luxury Collection 2026
               </Badge>
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-tight">
-              Elegance <span className="text-gold">Redefined</span>
+              Elegance <span className="text-gradient-gold">Redefined</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
               Discover our curated collection of premium watches, bags, jewelry, and accessories. Luxury made accessible, quality guaranteed.
             </p>
             <div className="flex gap-3 justify-center">
-              <Link to="/shop"><Button size="lg" className="gap-2 shadow-lg">Shop Now <ArrowRight className="h-4 w-4" /></Button></Link>
-              <Link to="/shop"><Button size="lg" variant="outline" className="gap-2">View Collection</Button></Link>
+              <Link to="/shop"><Button size="lg" className="gap-2 gradient-gold text-primary-foreground shadow-lg shadow-gold/20 hover:opacity-90">Shop Now <ArrowRight className="h-4 w-4" /></Button></Link>
+              <Link to="/shop"><Button size="lg" variant="outline" className="gap-2 glass border-gold/20 hover:bg-gold/10">View Collection</Button></Link>
             </div>
           </div>
         </div>
       </section>
 
       {/* Trust Badges */}
-      <section className="border-y bg-card/50">
+      <section className="border-y border-border/50">
         <div className="container px-4 py-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -172,7 +187,7 @@ export default function Index() {
               { icon: HeadphonesIcon, text: "24/7 Support", sub: "Always here for you" },
               { icon: Crown, text: "Premium Quality", sub: "Only the finest" },
             ].map(b => (
-              <div key={b.text} className="flex items-center gap-3 justify-center">
+              <div key={b.text} className="flex items-center gap-3 justify-center glass-card rounded-xl p-3">
                 <b.icon className="h-8 w-8 text-gold shrink-0" />
                 <div>
                   <p className="font-semibold text-sm">{b.text}</p>
@@ -190,20 +205,20 @@ export default function Index() {
           <h2 className="font-display text-2xl font-bold mb-6">Latest Announcements</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {announcements.slice(0, 4).map(a => (
-              <Card key={a.id} className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow">
+              <div key={a.id} className="glass-card rounded-2xl overflow-hidden hover:shadow-[0_16px_48px_hsla(40,70%,50%,0.1)] transition-all duration-300">
                 <div className={a.image_url ? "md:flex" : ""}>
                   {a.image_url && (
                     <div className="md:w-1/3 shrink-0">
                       <img src={a.image_url} alt={a.title} className="w-full h-40 md:h-full object-cover" />
                     </div>
                   )}
-                  <CardContent className="p-5">
+                  <div className="p-5">
                     <Badge className={`${tagColors[a.tag] || "bg-primary"} text-white mb-2`}>{a.tag}</Badge>
                     <h3 className="font-display text-lg font-semibold mb-1">{a.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{a.content}</p>
-                  </CardContent>
+                  </div>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </section>
@@ -213,25 +228,28 @@ export default function Index() {
       <section className="container px-4 py-12">
         <h2 className="font-display text-3xl font-bold text-center mb-10">Shop by Category</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map(cat => (
-            <Link key={cat.name} to={`/shop?category=${cat.name}`}>
-              <Card className="group cursor-pointer border-0 shadow-md hover:shadow-xl transition-all overflow-hidden hover:-translate-y-1">
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl mb-3">{cat.icon}</div>
+          {categories.map(cat => {
+            const IconComp = cat.icon;
+            return (
+              <Link key={cat.name} to={`/shop?category=${cat.name}`}>
+                <div className="group glass-card rounded-2xl p-6 text-center cursor-pointer hover:scale-105 hover:shadow-[0_16px_48px_hsla(40,70%,50%,0.15)] transition-all duration-500">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-gold/10 flex items-center justify-center mb-3 group-hover:bg-gold/20 transition-colors">
+                    <IconComp className="h-7 w-7 text-gold" />
+                  </div>
                   <h3 className="font-display font-semibold capitalize">{cat.name}</h3>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
       {/* Featured Products */}
-      <section className="bg-secondary/30 py-16">
+      <section className="py-16">
         <div className="container px-4">
           <div className="flex items-center justify-between mb-8">
             <h2 className="font-display text-3xl font-bold">Featured Products</h2>
-            <Link to="/shop"><Button variant="outline" className="gap-1">View All <ArrowRight className="h-4 w-4" /></Button></Link>
+            <Link to="/shop"><Button variant="outline" className="gap-1 glass border-gold/20 hover:bg-gold/10">View All <ArrowRight className="h-4 w-4" /></Button></Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map(p => <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} />)}
@@ -243,7 +261,7 @@ export default function Index() {
       <section className="container px-4 py-16">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
-            <Badge variant="secondary" className="mb-4">About Us</Badge>
+            <Badge variant="secondary" className="mb-4 glass">About Us</Badge>
             <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">The Rejoice Collection</h2>
           </div>
           <div className="grid md:grid-cols-2 gap-8 items-center">
@@ -257,25 +275,23 @@ export default function Index() {
               <p className="text-muted-foreground leading-relaxed">
                 With nationwide delivery, secure payment processing, and dedicated customer support, we're committed to making your shopping experience seamless and enjoyable. Join thousands of satisfied customers who trust The Rejoice Collection for their luxury needs.
               </p>
-              <div className="flex gap-4 pt-2">
-                <div className="text-center">
-                  <div className="font-display text-2xl font-bold text-gold">1000+</div>
-                  <div className="text-xs text-muted-foreground">Happy Customers</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-display text-2xl font-bold text-gold">100%</div>
-                  <div className="text-xs text-muted-foreground">Authentic Products</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-display text-2xl font-bold text-gold">24/7</div>
-                  <div className="text-xs text-muted-foreground">Customer Support</div>
-                </div>
+              <div className="flex gap-6 pt-4">
+                {[
+                  { val: "1000+", label: "Happy Customers" },
+                  { val: "100%", label: "Authentic Products" },
+                  { val: "24/7", label: "Customer Support" },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <div className="font-display text-2xl font-bold text-gradient-gold">{s.val}</div>
+                    <div className="text-xs text-muted-foreground">{s.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="bg-gradient-to-br from-primary/10 to-gold/10 rounded-2xl p-8 flex items-center justify-center">
+            <div className="glass-card rounded-2xl p-8 flex items-center justify-center animate-float">
               <div className="text-center space-y-3">
-                <div className="w-24 h-24 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="font-display text-3xl font-bold text-gold">TRC</span>
+                <div className="w-24 h-24 mx-auto rounded-full gradient-gold flex items-center justify-center shadow-lg shadow-gold/30 animate-glow">
+                  <span className="font-display text-3xl font-bold text-primary-foreground">TRC</span>
                 </div>
                 <h3 className="font-display text-xl font-bold">The Rejoice Collection</h3>
                 <p className="text-sm text-muted-foreground italic">"Luxury Redefined, Quality Assured"</p>

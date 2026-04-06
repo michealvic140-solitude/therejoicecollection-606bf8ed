@@ -256,7 +256,10 @@ export type Database = {
         Row: {
           cancellation_reason: string | null
           created_at: string
+          delivery_address: string | null
+          delivery_city: string | null
           delivery_method: string
+          delivery_state: string | null
           id: string
           items: Json
           pickup_location: string | null
@@ -278,7 +281,10 @@ export type Database = {
         Insert: {
           cancellation_reason?: string | null
           created_at?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
           delivery_method?: string
+          delivery_state?: string | null
           id?: string
           items?: Json
           pickup_location?: string | null
@@ -300,7 +306,10 @@ export type Database = {
         Update: {
           cancellation_reason?: string | null
           created_at?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
           delivery_method?: string
+          delivery_state?: string | null
           id?: string
           items?: Json
           pickup_location?: string | null
@@ -318,6 +327,42 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_name?: string
+        }
+        Relationships: []
+      }
+      popup_ads: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          discount_percent: number | null
+          id: string
+          image_url: string | null
+          link_id: string
+          link_type: string
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          discount_percent?: number | null
+          id?: string
+          image_url?: string | null
+          link_id?: string
+          link_type?: string
+          title: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          discount_percent?: number | null
+          id?: string
+          image_url?: string | null
+          link_id?: string
+          link_type?: string
+          title?: string
         }
         Relationships: []
       }
@@ -423,6 +468,39 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          discount_percent: number
+          id: string
+          max_uses: number | null
+          min_quantity: number
+          used_count: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          discount_percent?: number
+          id?: string
+          max_uses?: number | null
+          min_quantity?: number
+          used_count?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          discount_percent?: number
+          id?: string
+          max_uses?: number | null
+          min_quantity?: number
+          used_count?: number
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           comment: string | null
@@ -477,6 +555,68 @@ export type Database = {
           id?: string
           key?: string
           value?: string
+        }
+        Relationships: []
+      }
+      spin_results: {
+        Row: {
+          created_at: string
+          id: string
+          prize_name: string
+          prize_type: string
+          prize_value: string
+          spin_wheel_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prize_name?: string
+          prize_type?: string
+          prize_value?: string
+          spin_wheel_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prize_name?: string
+          prize_type?: string
+          prize_value?: string
+          spin_wheel_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spin_results_spin_wheel_id_fkey"
+            columns: ["spin_wheel_id"]
+            isOneToOne: false
+            referencedRelation: "spin_wheels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spin_wheels: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          prizes: Json
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          prizes?: Json
+          title: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          prizes?: Json
+          title?: string
         }
         Relationships: []
       }

@@ -1,5 +1,4 @@
 import { Tables } from "@/integrations/supabase/types";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart } from "lucide-react";
@@ -15,32 +14,35 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   return (
-    <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300">
+    <div className="group glass-card rounded-2xl overflow-hidden hover:scale-[1.02] transition-all duration-500 hover:shadow-[0_16px_48px_hsla(40,70%,50%,0.15)]">
       <Link to={`/product/${product.id}`}>
-        <div className="aspect-square overflow-hidden bg-muted">
+        <div className="aspect-square overflow-hidden relative">
           <img
             src={product.image_url || "/placeholder.svg"}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          {product.out_of_stock && (
+            <div className="absolute top-3 right-3">
+              <Badge variant="destructive" className="shadow-lg">Out of Stock</Badge>
+            </div>
+          )}
         </div>
       </Link>
-      <CardContent className="p-4 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <Link to={`/product/${product.id}`}>
-              <h3 className="font-display font-semibold text-lg leading-tight hover:text-primary transition-colors">
-                {product.name}
-              </h3>
-            </Link>
-            <p className="text-sm text-muted-foreground capitalize">{product.category}</p>
-          </div>
-          {product.out_of_stock && <Badge variant="destructive">Out of Stock</Badge>}
+      <div className="p-4 space-y-3">
+        <div>
+          <Link to={`/product/${product.id}`}>
+            <h3 className="font-display font-semibold text-lg leading-tight hover:text-gold transition-colors line-clamp-1">
+              {product.name}
+            </h3>
+          </Link>
+          <p className="text-sm text-muted-foreground capitalize mt-0.5">{product.category}</p>
         </div>
         <div className="flex items-center justify-between pt-1">
-          <span className="text-xl font-bold text-primary">{formatPrice(product.price)}</span>
+          <span className="text-xl font-bold text-gradient-gold">{formatPrice(product.price)}</span>
           {onAddToCart && !product.out_of_stock && (
-            <Button size="sm" onClick={() => onAddToCart(product.id)} className="gap-1.5">
+            <Button size="sm" onClick={() => onAddToCart(product.id)} className="gap-1.5 gradient-gold text-primary-foreground hover:opacity-90 border-0 shadow-lg shadow-gold/20">
               <ShoppingCart className="h-4 w-4" /> Add
             </Button>
           )}
@@ -48,7 +50,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         {product.shipping && (
           <p className="text-xs text-muted-foreground">Free shipping on orders above ₦50,000</p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

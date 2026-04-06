@@ -5,11 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatPrice } from "@/lib/format";
-import { Eye } from "lucide-react";
+import { Eye, MapPin, Store } from "lucide-react";
 import { toast } from "sonner";
 
 type Order = Tables<"orders">;
@@ -19,8 +17,6 @@ const statuses = ["Pending Payment", "Payment Confirmed", "Processing", "Shipped
 export function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [viewImage, setViewImage] = useState<string | null>(null);
-  const [readjustDialog, setReadjustDialog] = useState<string | null>(null);
-  const [readjustMsg, setReadjustMsg] = useState("");
 
   const fetchOrders = async () => {
     const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
@@ -49,6 +45,7 @@ export function AdminOrders() {
       <h2 className="font-display text-xl font-bold">Orders ({orders.length})</h2>
       {orders.map(order => {
         const items = Array.isArray(order.items) ? order.items : [];
+        const o = order as any;
         return (
           <Card key={order.id}>
             <CardContent className="p-4 space-y-3">
@@ -71,6 +68,30 @@ export function AdminOrders() {
                   </Select>
                 </div>
               </div>
+
+              {/* Delivery / Pickup Info */}
+              <div className="glass rounded-lg p-3 text-sm space-y-1">
+                <div className="flex items-center gap-1 font-semibold text-gold">
+                  {order.delivery_method === "pickup" ? <Store className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                  {order.delivery_method === "pickup" ? "Pickup" : "Delivery"}
+                </div>
+                {order.delivery_method === "pickup" ? (
+                  <p className="text-muted-foreground">
+                    Location: {order.pickup_location || "Not specified"}
+                  </p>
+                ) : (
+                  <div className="text-muted-foreground">
+                    {o.delivery_address && <p>Address: {o.delivery_address}</p>}
+                    {(o.delivery_city || o.delivery_state) && (
+                      <p>{[o.delivery_city, o.delivery_state].filter(Boolean).join(", ")}</p>
+                    )}
+                    {!o.delivery_address && !o.delivery_city && !o.delivery_state && (
+                      <p className="italic">No address provided</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="text-sm space-y-1">
                 {(items as any[]).map((item: any, i: number) => (
                   <div key={i} className="flex justify-between">
@@ -79,7 +100,7 @@ export function AdminOrders() {
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between font-bold text-primary">
+              <div className="flex justify-between font-bold text-gold">
                 <span>Total</span>
                 <span>{formatPrice(order.total)}</span>
               </div>
