@@ -14,6 +14,9 @@ import { AdminChats } from "@/components/admin/AdminChats";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminEvents } from "@/components/admin/AdminEvents";
 import { AdminRefunds } from "@/components/admin/AdminRefunds";
+import { AdminPromoCodes } from "@/components/admin/AdminPromoCodes";
+import { AdminSpinWheels } from "@/components/admin/AdminSpinWheels";
+import { AdminPopupAds } from "@/components/admin/AdminPopupAds";
 
 export default function Admin() {
   const { isAdmin, loading } = useAuth();
@@ -34,7 +37,10 @@ export default function Admin() {
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="negotiations">Negotiations</TabsTrigger>
           <TabsTrigger value="refunds">Refunds</TabsTrigger>
+          <TabsTrigger value="promos">Promo Codes</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
+          <TabsTrigger value="spins">Spin Wheel</TabsTrigger>
+          <TabsTrigger value="ads">Popup Ads</TabsTrigger>
           <TabsTrigger value="announcements">Announcements</TabsTrigger>
           <TabsTrigger value="chats">Chats</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -47,7 +53,10 @@ export default function Admin() {
         <TabsContent value="users"><AdminUsers /></TabsContent>
         <TabsContent value="negotiations"><AdminNegotiations /></TabsContent>
         <TabsContent value="refunds"><AdminRefunds /></TabsContent>
+        <TabsContent value="promos"><AdminPromoCodes /></TabsContent>
         <TabsContent value="events"><AdminEvents /></TabsContent>
+        <TabsContent value="spins"><AdminSpinWheels /></TabsContent>
+        <TabsContent value="ads"><AdminPopupAds /></TabsContent>
         <TabsContent value="announcements"><AdminAnnouncements /></TabsContent>
         <TabsContent value="chats"><AdminChats /></TabsContent>
         <TabsContent value="settings"><AdminSettings /></TabsContent>
