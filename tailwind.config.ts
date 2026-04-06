@@ -27,6 +27,10 @@ export default {
           DEFAULT: "hsl(var(--gold))",
           light: "hsl(var(--gold-light))",
         },
+        glass: {
+          DEFAULT: "hsla(var(--glass))",
+          border: "hsla(var(--glass-border))",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
