@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +14,7 @@ import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminEvents } from "@/components/admin/AdminEvents";
 import { AdminRefunds } from "@/components/admin/AdminRefunds";
 import { AdminPromoCodes } from "@/components/admin/AdminPromoCodes";
+import { AdminCoupons } from "@/components/admin/AdminCoupons";
 import { AdminSpinWheels } from "@/components/admin/AdminSpinWheels";
 import { AdminPopupAds } from "@/components/admin/AdminPopupAds";
 
@@ -26,9 +26,9 @@ export default function Admin() {
 
   return (
     <div className="container px-4 py-8 animate-fade-in">
-      <h1 className="font-display text-3xl font-bold mb-6">Admin Panel</h1>
+      <h1 className="font-display text-3xl font-bold mb-6 text-gradient-gold">Admin Panel</h1>
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="flex flex-wrap h-auto gap-1">
+        <TabsList className="flex flex-wrap h-auto gap-1 glass p-1.5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
@@ -38,6 +38,7 @@ export default function Admin() {
           <TabsTrigger value="negotiations">Negotiations</TabsTrigger>
           <TabsTrigger value="refunds">Refunds</TabsTrigger>
           <TabsTrigger value="promos">Promo Codes</TabsTrigger>
+          <TabsTrigger value="coupons">Coupons</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="spins">Spin Wheel</TabsTrigger>
           <TabsTrigger value="ads">Popup Ads</TabsTrigger>
@@ -54,6 +55,7 @@ export default function Admin() {
         <TabsContent value="negotiations"><AdminNegotiations /></TabsContent>
         <TabsContent value="refunds"><AdminRefunds /></TabsContent>
         <TabsContent value="promos"><AdminPromoCodes /></TabsContent>
+        <TabsContent value="coupons"><AdminCoupons /></TabsContent>
         <TabsContent value="events"><AdminEvents /></TabsContent>
         <TabsContent value="spins"><AdminSpinWheels /></TabsContent>
         <TabsContent value="ads"><AdminPopupAds /></TabsContent>

@@ -25,12 +25,12 @@ interface TrackingEntry {
 }
 
 const statusColors: Record<string, string> = {
-  "Pending Payment": "bg-yellow-100 text-yellow-800",
-  "Payment Confirmed": "bg-blue-100 text-blue-800",
-  "Processing": "bg-purple-100 text-purple-800",
-  "Shipped": "bg-indigo-100 text-indigo-800",
-  "Delivered": "bg-green-100 text-green-800",
-  "Cancelled": "bg-red-100 text-red-800",
+  "Pending Payment": "bg-amber-500/20 text-amber-400",
+  "Payment Confirmed": "bg-blue-500/20 text-blue-400",
+  "Processing": "bg-purple-500/20 text-purple-400",
+  "Shipped": "bg-indigo-500/20 text-indigo-400",
+  "Delivered": "bg-emerald-500/20 text-emerald-400",
+  "Cancelled": "bg-red-500/20 text-red-400",
 };
 
 export default function Orders() {
@@ -93,7 +93,6 @@ export default function Orders() {
     setRefundReason("");
     setRefundPhoto(null);
 
-    // Refresh
     const { data } = await supabase.from("orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
     if (data) setOrders(data);
   };
@@ -158,7 +157,7 @@ export default function Orders() {
     <div className="container px-4 py-8 animate-fade-in">
       <h1 className="font-display text-3xl font-bold mb-6">My Orders</h1>
       <Tabs defaultValue="orders">
-        <TabsList>
+        <TabsList className="glass">
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="history">Payment History</TabsTrigger>
         </TabsList>
@@ -166,12 +165,13 @@ export default function Orders() {
         <TabsContent value="orders" className="space-y-4 mt-4">
           {orders.map(order => {
             const items = Array.isArray(order.items) ? order.items : [];
-            const canRefund = ["Delivered", "Shipped", "Processing", "Payment Confirmed"].includes(order.status);
+            // Allow refund on cancelled orders too (post-cancellation refund)
+            const canRefund = ["Delivered", "Shipped", "Processing", "Payment Confirmed", "Cancelled"].includes(order.status);
             return (
-              <Card key={order.id}>
+              <Card key={order.id} className="glass-card border-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-base font-mono">{order.id}</CardTitle>
-                  <Badge className={statusColors[order.status] || ""}>{order.status}</Badge>
+                  <CardTitle className="text-base font-mono text-gold">{order.id}</CardTitle>
+                  <Badge className={statusColors[order.status] || "bg-secondary"}>{order.status}</Badge>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="text-sm text-muted-foreground">
@@ -185,30 +185,28 @@ export default function Orders() {
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-between font-bold border-t pt-2">
+                  <div className="flex justify-between font-bold border-t border-border/30 pt-2">
                     <span>Total</span>
-                    <span className="text-primary">{formatPrice(order.total)}</span>
+                    <span className="text-gold">{formatPrice(order.total)}</span>
                   </div>
 
                   {/* Refund status */}
                   {order.refund_status && order.refund_status !== "" && (
-                    <div className="bg-secondary/50 p-3 rounded-lg text-sm">
+                    <div className="glass rounded-lg p-3 text-sm space-y-1">
                       <p><strong>Refund Status:</strong> <Badge variant="secondary">{order.refund_status}</Badge></p>
                       {order.refund_admin_note && <p className="text-muted-foreground mt-1">Admin note: {order.refund_admin_note}</p>}
                     </div>
                   )}
 
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {/* Track Order */}
-                    <Button variant="outline" size="sm" className="gap-1" onClick={() => fetchTracking(order.id)}>
+                    <Button variant="outline" size="sm" className="gap-1 glass" onClick={() => fetchTracking(order.id)}>
                       <Truck className="h-4 w-4" /> Track Order
                     </Button>
 
-                    {/* Upload Payment Proof */}
                     {order.status === "Pending Payment" && !order.screenshot_url && (
                       <div className="flex items-center gap-2">
-                        <Input type="file" accept="image/*" className="w-40 h-8 text-xs" onChange={e => setScreenshotFile(e.target.files?.[0] || null)} />
-                        <Button size="sm" disabled={!screenshotFile || uploadingScreenshot === order.id} onClick={() => uploadPaymentProof(order.id)} className="gap-1">
+                        <Input type="file" accept="image/*" className="w-40 h-8 text-xs glass" onChange={e => setScreenshotFile(e.target.files?.[0] || null)} />
+                        <Button size="sm" disabled={!screenshotFile || uploadingScreenshot === order.id} onClick={() => uploadPaymentProof(order.id)} className="gap-1 gradient-gold text-primary-foreground">
                           <Upload className="h-4 w-4" /> {uploadingScreenshot === order.id ? "Uploading..." : "Upload Proof"}
                         </Button>
                       </div>
@@ -217,19 +215,16 @@ export default function Orders() {
                       <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3 w-3" /> Proof Uploaded</Badge>
                     )}
 
-                    {/* Cancel */}
                     {order.status === "Pending Payment" && (
                       <Button variant="destructive" size="sm" onClick={() => cancelOrder(order.id)}>Cancel Order</Button>
                     )}
 
-                    {/* Request Refund */}
                     {canRefund && (!order.refund_status || order.refund_status === "") && (
-                      <Button variant="outline" size="sm" onClick={() => setRefundDialog(order.id)}>Request Refund</Button>
+                      <Button variant="outline" size="sm" className="glass" onClick={() => setRefundDialog(order.id)}>Request Refund</Button>
                     )}
 
-                    {/* Review */}
                     {order.status === "Delivered" && (items as any[]).length > 0 && (
-                      <Button variant="outline" size="sm" className="gap-1" onClick={() => setReviewDialog({ orderId: order.id, productId: (items as any[])[0]?.productId || "" })}>
+                      <Button variant="outline" size="sm" className="gap-1 glass" onClick={() => setReviewDialog({ orderId: order.id, productId: (items as any[])[0]?.productId || "" })}>
                         <Star className="h-4 w-4" /> Rate & Review
                       </Button>
                     )}
@@ -242,14 +237,14 @@ export default function Orders() {
 
         <TabsContent value="history" className="space-y-4 mt-4">
           {orders.filter(o => o.screenshot_url || o.status !== "Pending Payment").map(order => (
-            <Card key={order.id}>
+            <Card key={order.id} className="glass-card border-0">
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="font-mono font-bold">{order.id}</p>
+                  <p className="font-mono font-bold text-gold">{order.id}</p>
                   <p className="text-sm text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
                 </div>
                 <Badge className={statusColors[order.status] || ""}>{order.status}</Badge>
-                <span className="font-bold text-primary">{formatPrice(order.total)}</span>
+                <span className="font-bold text-gold">{formatPrice(order.total)}</span>
               </CardContent>
             </Card>
           ))}
@@ -258,7 +253,7 @@ export default function Orders() {
 
       {/* Tracking Dialog */}
       <Dialog open={!!trackingDialog} onOpenChange={() => setTrackingDialog(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md glass-strong">
           <DialogHeader><DialogTitle className="font-display">Order Tracking — {trackingDialog}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {tracking.length === 0 ? (
@@ -270,7 +265,7 @@ export default function Orders() {
               tracking.map((t, i) => (
                 <div key={t.id} className="flex gap-3">
                   <div className="flex flex-col items-center">
-                    <div className={`w-3 h-3 rounded-full ${i === tracking.length - 1 ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                    <div className={`w-3 h-3 rounded-full ${i === tracking.length - 1 ? "bg-gold" : "bg-muted-foreground/30"}`} />
                     {i < tracking.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
                   </div>
                   <div className="pb-4">
@@ -289,45 +284,45 @@ export default function Orders() {
 
       {/* Refund Dialog */}
       <Dialog open={!!refundDialog} onOpenChange={() => setRefundDialog(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Request Refund</DialogTitle></DialogHeader>
+        <DialogContent className="glass-strong">
+          <DialogHeader><DialogTitle className="font-display">Request Refund</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-2"><Label>Reason</Label><Textarea value={refundReason} onChange={e => setRefundReason(e.target.value)} placeholder="Why do you want a refund?" required /></div>
-            <div className="space-y-2"><Label>Photo (optional)</Label><Input type="file" accept="image/*" onChange={e => setRefundPhoto(e.target.files?.[0] || null)} /></div>
-            <Button onClick={requestRefund} className="w-full" disabled={!refundReason.trim()}>Submit Refund Request</Button>
+            <div className="space-y-2"><Label>Reason</Label><Textarea value={refundReason} onChange={e => setRefundReason(e.target.value)} placeholder="Why do you want a refund?" required className="glass" /></div>
+            <div className="space-y-2"><Label>Photo (optional)</Label><Input type="file" accept="image/*" onChange={e => setRefundPhoto(e.target.files?.[0] || null)} className="glass" /></div>
+            <Button onClick={requestRefund} className="w-full gradient-gold text-primary-foreground" disabled={!refundReason.trim()}>Submit Refund Request</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Review Dialog */}
       <Dialog open={!!reviewDialog} onOpenChange={() => setReviewDialog(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Rate & Review</DialogTitle></DialogHeader>
+        <DialogContent className="glass-strong">
+          <DialogHeader><DialogTitle className="font-display">Rate & Review</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Product Rating</Label>
               <div className="flex gap-1">
-                {[1,2,3,4,5].map(s => (
+                {[1, 2, 3, 4, 5].map(s => (
                   <button key={s} onClick={() => setRating(s)}>
                     <Star className={`h-7 w-7 ${s <= rating ? "fill-gold text-gold" : "text-muted-foreground"}`} />
                   </button>
                 ))}
               </div>
             </div>
-            <div className="space-y-2"><Label>Product Comment</Label><Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="How was the product?" /></div>
+            <div className="space-y-2"><Label>Product Comment</Label><Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="How was the product?" className="glass" /></div>
             <div className="space-y-2">
               <Label>Delivery Rating</Label>
               <div className="flex gap-1">
-                {[1,2,3,4,5].map(s => (
+                {[1, 2, 3, 4, 5].map(s => (
                   <button key={s} onClick={() => setDeliveryRating(s)}>
                     <Star className={`h-7 w-7 ${s <= deliveryRating ? "fill-gold text-gold" : "text-muted-foreground"}`} />
                   </button>
                 ))}
               </div>
             </div>
-            <div className="space-y-2"><Label>Delivery Comment</Label><Textarea value={deliveryComment} onChange={e => setDeliveryComment(e.target.value)} placeholder="How was the delivery?" /></div>
-            <div className="space-y-2"><Label>Image (optional)</Label><Input type="file" accept="image/*" onChange={e => setReviewImage(e.target.files?.[0] || null)} /></div>
-            <Button onClick={submitReview} className="w-full">Submit Review</Button>
+            <div className="space-y-2"><Label>Delivery Comment</Label><Textarea value={deliveryComment} onChange={e => setDeliveryComment(e.target.value)} placeholder="How was the delivery?" className="glass" /></div>
+            <div className="space-y-2"><Label>Image (optional)</Label><Input type="file" accept="image/*" onChange={e => setReviewImage(e.target.files?.[0] || null)} className="glass" /></div>
+            <Button onClick={submitReview} className="w-full gradient-gold text-primary-foreground">Submit Review</Button>
           </div>
         </DialogContent>
       </Dialog>
