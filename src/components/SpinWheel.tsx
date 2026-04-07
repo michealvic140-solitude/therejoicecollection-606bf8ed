@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Gift, Sparkles, Star } from "lucide-react";
 import { toast } from "sonner";
 
 interface Prize {
@@ -19,7 +19,10 @@ interface SpinWheelData {
   prizes: Prize[];
 }
 
-const COLORS = ["#C8A23D", "#1a1a2e", "#D4AF37", "#2d2d44", "#B8860B", "#3d3d5c", "#DAA520", "#4d4d6e"];
+const COLORS = [
+  "hsl(40,70%,45%)", "hsl(220,50%,25%)", "hsl(35,80%,50%)", "hsl(240,30%,20%)",
+  "hsl(30,60%,40%)", "hsl(260,40%,25%)", "hsl(45,65%,55%)", "hsl(200,40%,20%)",
+];
 
 export function SpinWheel() {
   const { user } = useAuth();
@@ -41,7 +44,6 @@ export function SpinWheel() {
         }));
         if (prizes.length >= 2) {
           setWheel({ id: w.id, title: w.title, prizes });
-          // Show after 3 second delay
           setTimeout(() => setOpen(true), 3000);
         }
       }
@@ -58,10 +60,22 @@ export function SpinWheel() {
     if (!ctx) return;
     const size = canvas.width;
     const center = size / 2;
-    const radius = center - 10;
+    const radius = center - 12;
     const arc = (2 * Math.PI) / prizes.length;
 
     ctx.clearRect(0, 0, size, size);
+
+    // Outer glow
+    ctx.save();
+    ctx.shadowColor = "hsla(40,70%,50%,0.4)";
+    ctx.shadowBlur = 30;
+    ctx.beginPath();
+    ctx.arc(center, center, radius + 8, 0, 2 * Math.PI);
+    ctx.strokeStyle = "hsl(40,70%,50%)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+
     ctx.save();
     ctx.translate(center, center);
     ctx.rotate((rot * Math.PI) / 180);
@@ -69,38 +83,66 @@ export function SpinWheel() {
 
     prizes.forEach((prize, i) => {
       const angle = i * arc;
+      // Segment
       ctx.beginPath();
       ctx.moveTo(center, center);
       ctx.arc(center, center, radius, angle, angle + arc);
       ctx.fillStyle = prize.color;
       ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.15)";
+      // Border
+      ctx.strokeStyle = "hsla(40,70%,50%,0.3)";
       ctx.lineWidth = 2;
       ctx.stroke();
+
+      // Inner shine
+      const gradient = ctx.createRadialGradient(center, center, 0, center, center, radius);
+      gradient.addColorStop(0, "hsla(0,0%,100%,0.08)");
+      gradient.addColorStop(1, "transparent");
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.arc(center, center, radius, angle, angle + arc);
+      ctx.fillStyle = gradient;
+      ctx.fill();
 
       // Text
       ctx.save();
       ctx.translate(center, center);
       ctx.rotate(angle + arc / 2);
       ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 11px 'DM Sans'";
+      ctx.font = "bold 12px 'DM Sans'";
       ctx.textAlign = "right";
-      ctx.fillText(prize.name.slice(0, 14), radius - 15, 4);
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 4;
+      ctx.fillText(prize.name.slice(0, 14), radius - 18, 4);
       ctx.restore();
+    });
+
+    // Decorative dots
+    prizes.forEach((_, i) => {
+      const angle = i * arc;
+      for (let d = 0.3; d < 0.9; d += 0.15) {
+        ctx.beginPath();
+        ctx.arc(center + Math.cos(angle + arc / 2) * radius * d, center + Math.sin(angle + arc / 2) * radius * d, 1.5, 0, 2 * Math.PI);
+        ctx.fillStyle = "hsla(40,70%,50%,0.15)";
+        ctx.fill();
+      }
     });
 
     ctx.restore();
 
-    // Center circle
+    // Center button
     ctx.beginPath();
-    ctx.arc(center, center, 22, 0, 2 * Math.PI);
-    ctx.fillStyle = "#C8A23D";
+    ctx.arc(center, center, 28, 0, 2 * Math.PI);
+    const cGrad = ctx.createRadialGradient(center - 5, center - 5, 0, center, center, 28);
+    cGrad.addColorStop(0, "hsl(40,80%,60%)");
+    cGrad.addColorStop(1, "hsl(35,70%,40%)");
+    ctx.fillStyle = cGrad;
     ctx.fill();
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = "hsla(0,0%,100%,0.4)";
     ctx.lineWidth = 3;
     ctx.stroke();
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 10px 'DM Sans'";
+    ctx.font = "bold 11px 'DM Sans'";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("SPIN", center, center);
@@ -139,7 +181,6 @@ export function SpinWheel() {
         setSpinning(false);
         setHasSpun(true);
 
-        // Save result
         supabase.from("spin_results").insert({
           user_id: user.id,
           spin_wheel_id: wheel.id,
@@ -148,7 +189,21 @@ export function SpinWheel() {
           prize_value: prize.value,
         } as any);
 
-        toast.success(`🎉 You won: ${prize.name}!`);
+        // If prize is a coupon/discount, auto-create coupon for user
+        if (prize.type === "discount" || prize.type === "voucher") {
+          supabase.from("coupons").insert({
+            code: `SPIN-${Date.now().toString(36).toUpperCase()}`,
+            discount_percent: prize.type === "discount" ? parseFloat(prize.value) || 0 : 0,
+            discount_amount: prize.type === "voucher" ? parseFloat(prize.value) || 0 : 0,
+            user_id: user.id,
+            for_all_users: false,
+            source: "spin",
+            active: true,
+            expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+          } as any);
+        }
+
+        toast.success(`You won: ${prize.name}!`);
       }
     };
     requestAnimationFrame(animate);
@@ -158,48 +213,74 @@ export function SpinWheel() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="glass-strong max-w-sm p-0 border-gold/20 overflow-hidden">
-        <div className="relative">
-          <div className="absolute top-3 right-3 z-10">
-            <button onClick={() => setOpen(false)} className="p-1 rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="bg-gradient-to-b from-gold/20 to-transparent p-6 text-center">
-            <h2 className="font-display text-2xl font-bold text-gradient-gold mb-1">{wheel.title}</h2>
-            <p className="text-sm text-muted-foreground">Spin the wheel for a chance to win!</p>
-          </div>
-          <div className="flex justify-center py-4 relative">
-            {/* Pointer */}
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-gold" />
-            <canvas
-              ref={canvasRef}
-              width={280}
-              height={280}
-              className="rounded-full shadow-[0_0_30px_hsla(40,70%,50%,0.3)]"
-            />
-          </div>
-          {result ? (
-            <div className="p-6 text-center space-y-3">
-              <div className="text-4xl">🎉</div>
-              <p className="font-display text-xl font-bold text-gold">You won: {result.name}!</p>
-              <p className="text-sm text-muted-foreground">Type: {result.type} — Value: {result.value}</p>
-              <Button onClick={() => setOpen(false)} className="gradient-gold text-primary-foreground">
-                Claim Prize
-              </Button>
+      <DialogContent className="max-w-[420px] p-0 border-0 overflow-hidden bg-transparent shadow-none [&>button]:hidden">
+        <div className="relative glass-strong rounded-2xl overflow-hidden border border-gold/20">
+          {/* Decorative background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-gold/10 via-transparent to-gold/5 pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-40 bg-gold/10 rounded-full blur-[60px] pointer-events-none" />
+
+          {/* Close button */}
+          <button onClick={() => setOpen(false)} className="absolute top-4 right-4 z-20 p-2 rounded-full glass hover:bg-white/10 text-white/70 hover:text-white transition-all">
+            <X className="h-4 w-4" />
+          </button>
+
+          {/* Header */}
+          <div className="relative pt-6 pb-3 text-center px-6">
+            <div className="flex justify-center gap-1 mb-2">
+              <Star className="h-4 w-4 text-gold animate-pulse" />
+              <Sparkles className="h-5 w-5 text-gold" />
+              <Star className="h-4 w-4 text-gold animate-pulse" />
             </div>
-          ) : (
-            <div className="p-6 text-center">
+            <h2 className="font-display text-2xl font-bold text-gradient-gold">{wheel.title}</h2>
+            <p className="text-sm text-muted-foreground mt-1">Try your luck and win amazing prizes!</p>
+          </div>
+
+          {/* Wheel */}
+          <div className="flex justify-center py-4 relative px-6">
+            {/* Pointer */}
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 z-10">
+              <div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[24px] border-l-transparent border-r-transparent border-t-gold drop-shadow-[0_2px_8px_hsla(40,70%,50%,0.5)]" />
+            </div>
+            <div className="relative">
+              {/* Outer ring */}
+              <div className="absolute -inset-3 rounded-full border-2 border-gold/20 animate-glow" />
+              <canvas
+                ref={canvasRef}
+                width={320}
+                height={320}
+                className="rounded-full shadow-[0_0_40px_hsla(40,70%,50%,0.2),inset_0_0_20px_hsla(0,0%,0%,0.3)]"
+              />
+            </div>
+          </div>
+
+          {/* Result or Spin Button */}
+          <div className="px-6 pb-6">
+            {result ? (
+              <div className="text-center space-y-3 animate-fade-in">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-gold animate-glow mx-auto">
+                  <Gift className="h-8 w-8 text-primary-foreground" />
+                </div>
+                <p className="font-display text-xl font-bold text-gold">{result.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {result.type === "discount" ? `${result.value}% discount coupon added!` :
+                    result.type === "voucher" ? `₦${result.value} voucher added to your account!` :
+                      `${result.type} — ${result.value}`}
+                </p>
+                <Button onClick={() => setOpen(false)} className="gradient-gold text-primary-foreground w-full">
+                  Claim Prize
+                </Button>
+              </div>
+            ) : (
               <Button
                 onClick={spin}
                 disabled={spinning || hasSpun}
-                className="gradient-gold text-primary-foreground text-lg px-8 py-3 animate-glow"
+                className="w-full gradient-gold text-primary-foreground text-lg py-6 animate-glow font-display tracking-wide"
                 size="lg"
               >
                 {spinning ? "Spinning..." : hasSpun ? "Already Spun" : "SPIN NOW!"}
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

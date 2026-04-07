@@ -8,11 +8,24 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPrice } from "@/lib/format";
-import { Minus, Plus, Trash2, ShoppingBag, Upload, MapPin, Store, HandshakeIcon, Ticket } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, Upload, MapPin, Store, HandshakeIcon, Ticket, Clock, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
+
+interface Coupon {
+  id: string;
+  code: string;
+  discount_percent: number;
+  discount_amount: number;
+  min_quantity: number;
+  max_uses: number | null;
+  used_count: number;
+  expires_at: string | null;
+  source: string;
+}
 
 export default function Cart() {
   const { items, removeFromCart, updateQuantity, clearCart, total } = useCart();
@@ -32,10 +45,14 @@ export default function Cart() {
   const [offeredPrice, setOfferedPrice] = useState("");
   const [negotiateMsg, setNegotiateMsg] = useState("");
 
-  // Promo code
+  // Promo code (legacy)
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
+
+  // Coupons
+  const [userCoupons, setUserCoupons] = useState<Coupon[]>([]);
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
 
   const totalItemCount = items.reduce((s, i) => s + i.quantity, 0);
 
@@ -61,6 +78,21 @@ export default function Cart() {
     }
   }, [profile]);
 
+  // Fetch user coupons
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("coupons").select("*").eq("active", true).then(({ data }) => {
+      if (data) {
+        const valid = (data as Coupon[]).filter(c => {
+          if (c.expires_at && new Date(c.expires_at) < new Date()) return false;
+          if (c.max_uses && c.used_count >= c.max_uses) return false;
+          return true;
+        });
+        setUserCoupons(valid);
+      }
+    });
+  }, [user]);
+
   if ((profile as any)?.restricted) {
     return (
       <div className="container px-4 py-20 text-center animate-fade-in">
@@ -81,10 +113,31 @@ export default function Cart() {
     if (totalItemCount < promo.min_quantity) { toast.error(`You need at least ${promo.min_quantity} items in cart to use this code`); return; }
     setPromoDiscount(promo.discount_percent);
     setPromoApplied(true);
+    setSelectedCoupon(null);
     toast.success(`Promo applied! ${promo.discount_percent}% off`);
   };
 
-  const discountedTotal = promoApplied ? total * (1 - promoDiscount / 100) : total;
+  const applyCoupon = (coupon: Coupon) => {
+    if (totalItemCount < coupon.min_quantity) {
+      toast.error(`You need at least ${coupon.min_quantity} items to use this coupon`);
+      return;
+    }
+    setSelectedCoupon(coupon);
+    setPromoApplied(false);
+    setPromoDiscount(0);
+    toast.success(`Coupon ${coupon.code} applied!`);
+  };
+
+  const getCouponDiscount = () => {
+    if (!selectedCoupon) return 0;
+    if (selectedCoupon.discount_percent > 0) return total * (selectedCoupon.discount_percent / 100);
+    if (selectedCoupon.discount_amount > 0) return Math.min(selectedCoupon.discount_amount, total);
+    return 0;
+  };
+
+  const discountedTotal = selectedCoupon
+    ? total - getCouponDiscount()
+    : promoApplied ? total * (1 - promoDiscount / 100) : total;
 
   const handleNegotiate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,9 +209,13 @@ export default function Cart() {
       delivery_city: deliveryMethod === "delivery" ? address.city : "",
     } as any);
 
-    // Increment promo usage
+    // Increment coupon/promo usage
+    if (selectedCoupon) {
+      await supabase.from("coupons").update({ used_count: selectedCoupon.used_count + 1 } as any).eq("id", selectedCoupon.id);
+    }
     if (promoApplied && promoCode) {
-      await supabase.from("promo_codes").update({ used_count: (await supabase.from("promo_codes").select("used_count").eq("code", promoCode.toUpperCase()).single()).data?.used_count + 1 } as any).eq("code", promoCode.toUpperCase());
+      const { data: pc } = await supabase.from("promo_codes").select("used_count").eq("code", promoCode.toUpperCase()).single();
+      if (pc) await supabase.from("promo_codes").update({ used_count: (pc.used_count || 0) + 1 } as any).eq("code", promoCode.toUpperCase());
     }
 
     setUploading(false);
@@ -179,6 +236,11 @@ export default function Cart() {
     );
   }
 
+  const sourceLabel = (s: string) => {
+    const labels: Record<string, string> = { admin: "Gift", spin: "Spin Win", event: "Event", promo: "Promo" };
+    return labels[s] || s;
+  };
+
   return (
     <div className="container px-4 py-8 animate-fade-in">
       <h1 className="font-display text-3xl font-bold mb-6">Shopping Cart</h1>
@@ -186,7 +248,7 @@ export default function Cart() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
           {items.map(item => (
-            <div key={item.id} className="glass-card rounded-2xl p-4 flex items-center gap-4">
+            <div key={item.id} className="glass-card rounded-2xl p-4 flex items-center gap-4 hover:shadow-[0_8px_24px_hsla(40,70%,50%,0.08)] transition-all">
               <img src={item.product?.image_url || "/placeholder.svg"} alt={item.product?.name} className="w-20 h-20 object-cover rounded-xl" />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold truncate">{item.product?.name}</h3>
@@ -216,9 +278,9 @@ export default function Cart() {
               <span>Subtotal ({totalItemCount} items)</span>
               <span className="font-bold">{formatPrice(total)}</span>
             </div>
-            {promoApplied && (
+            {(promoApplied || selectedCoupon) && (
               <div className="flex justify-between text-gold">
-                <span>Discount ({promoDiscount}%)</span>
+                <span>Discount</span>
                 <span>-{formatPrice(total - discountedTotal)}</span>
               </div>
             )}
@@ -229,15 +291,48 @@ export default function Cart() {
               <span className="text-gradient-gold">{formatPrice(discountedTotal)}</span>
             </div>
 
-            {/* Promo Code */}
-            {!promoApplied && (
+            {/* Coupons Section */}
+            {user && userCoupons.length > 0 && !promoApplied && (
+              <div className="space-y-2 border-t border-border/30 pt-3">
+                <Label className="flex items-center gap-1 text-sm font-semibold"><Gift className="h-4 w-4 text-gold" /> Your Coupons</Label>
+                <Select value={selectedCoupon?.id || ""} onValueChange={v => {
+                  const c = userCoupons.find(c => c.id === v);
+                  if (c) applyCoupon(c);
+                }}>
+                  <SelectTrigger className="glass"><SelectValue placeholder="Select a coupon..." /></SelectTrigger>
+                  <SelectContent>
+                    {userCoupons.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.code} — {c.discount_percent > 0 ? `${c.discount_percent}% OFF` : `₦${c.discount_amount} OFF`}
+                        {" "}({sourceLabel(c.source)})
+                        {c.expires_at && ` · Exp ${new Date(c.expires_at).toLocaleDateString()}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedCoupon && (
+                  <div className="flex items-center gap-2">
+                    <Badge className="gradient-gold text-primary-foreground gap-1">
+                      <Ticket className="h-3 w-3" /> {selectedCoupon.code}
+                    </Badge>
+                    <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setSelectedCoupon(null)}>Remove</Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Promo Code (manual entry) */}
+            {!selectedCoupon && !promoApplied && (
               <div className="flex gap-2">
                 <Input value={promoCode} onChange={e => setPromoCode(e.target.value)} placeholder="Promo code" className="glass" />
                 <Button variant="outline" onClick={applyPromo} className="gap-1 glass"><Ticket className="h-4 w-4" /> Apply</Button>
               </div>
             )}
             {promoApplied && (
-              <Badge className="gradient-gold text-primary-foreground gap-1"><Ticket className="h-3 w-3" /> {promoCode.toUpperCase()} — {promoDiscount}% off</Badge>
+              <div className="flex items-center gap-2">
+                <Badge className="gradient-gold text-primary-foreground gap-1"><Ticket className="h-3 w-3" /> {promoCode.toUpperCase()} — {promoDiscount}% off</Badge>
+                <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => { setPromoApplied(false); setPromoDiscount(0); setPromoCode(""); }}>Remove</Button>
+              </div>
             )}
 
             {/* Negotiate button */}
@@ -308,12 +403,12 @@ export default function Cart() {
                   <div className="space-y-3">
                     <h4 className="font-semibold flex items-center gap-1 text-sm"><MapPin className="h-4 w-4" /> Delivery Address</h4>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1"><Label className="text-xs">State *</Label><Input value={address.state} onChange={e => setAddress({...address, state: e.target.value})} placeholder="Lagos" className="glass" /></div>
-                      <div className="space-y-1"><Label className="text-xs">City *</Label><Input value={address.city} onChange={e => setAddress({...address, city: e.target.value})} placeholder="Ikeja" className="glass" /></div>
-                      <div className="space-y-1"><Label className="text-xs">LGA</Label><Input value={address.lga} onChange={e => setAddress({...address, lga: e.target.value})} placeholder="Ikeja" className="glass" /></div>
-                      <div className="space-y-1"><Label className="text-xs">Nearest Landmark</Label><Input value={address.landmark} onChange={e => setAddress({...address, landmark: e.target.value})} placeholder="Near..." className="glass" /></div>
+                      <div className="space-y-1"><Label className="text-xs">State *</Label><Input value={address.state} onChange={e => setAddress({ ...address, state: e.target.value })} placeholder="Lagos" className="glass" /></div>
+                      <div className="space-y-1"><Label className="text-xs">City *</Label><Input value={address.city} onChange={e => setAddress({ ...address, city: e.target.value })} placeholder="Ikeja" className="glass" /></div>
+                      <div className="space-y-1"><Label className="text-xs">LGA</Label><Input value={address.lga} onChange={e => setAddress({ ...address, lga: e.target.value })} placeholder="Ikeja" className="glass" /></div>
+                      <div className="space-y-1"><Label className="text-xs">Nearest Landmark</Label><Input value={address.landmark} onChange={e => setAddress({ ...address, landmark: e.target.value })} placeholder="Near..." className="glass" /></div>
                     </div>
-                    <div className="space-y-1"><Label className="text-xs">Full Address *</Label><Input value={address.full_address} onChange={e => setAddress({...address, full_address: e.target.value})} placeholder="Full home address" className="glass" /></div>
+                    <div className="space-y-1"><Label className="text-xs">Full Address *</Label><Input value={address.full_address} onChange={e => setAddress({ ...address, full_address: e.target.value })} placeholder="Full home address" className="glass" /></div>
                   </div>
                 )}
 
