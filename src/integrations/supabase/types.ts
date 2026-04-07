@@ -106,6 +106,54 @@ export type Database = {
         }
         Relationships: []
       }
+      coupons: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          discount_amount: number
+          discount_percent: number
+          expires_at: string | null
+          for_all_users: boolean
+          id: string
+          max_uses: number | null
+          min_quantity: number
+          source: string
+          used_count: number
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          discount_amount?: number
+          discount_percent?: number
+          expires_at?: string | null
+          for_all_users?: boolean
+          id?: string
+          max_uses?: number | null
+          min_quantity?: number
+          source?: string
+          used_count?: number
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          discount_amount?: number
+          discount_percent?: number
+          expires_at?: string | null
+          for_all_users?: boolean
+          id?: string
+          max_uses?: number | null
+          min_quantity?: number
+          source?: string
+          used_count?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           active: boolean
