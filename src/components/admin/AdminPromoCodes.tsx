@@ -21,17 +21,45 @@ interface PromoCode {
   created_at: string;
 }
 
+interface PromoUsage {
+  id: string;
+  promo_code_id: string;
+  user_id: string;
+  used_at: string;
+}
+
+interface Profile {
+  user_id: string;
+  full_name: string;
+}
+
 export function AdminPromoCodes() {
   const [codes, setCodes] = useState<PromoCode[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
+  const [usageDialog, setUsageDialog] = useState<string | null>(null);
+  const [usage, setUsage] = useState<PromoUsage[]>([]);
   const [form, setForm] = useState({ code: "", discount_percent: "10", min_quantity: "1", max_uses: "", active: true });
 
   const fetch = async () => {
     const { data } = await supabase.from("promo_codes").select("*").order("created_at", { ascending: false });
     if (data) setCodes(data as PromoCode[]);
+    const { data: profs } = await supabase.from("profiles").select("user_id, full_name");
+    if (profs) setProfiles(profs as Profile[]);
   };
 
   useEffect(() => { fetch(); }, []);
+
+  const fetchUsage = async (promoId: string) => {
+    const { data } = await supabase.from("promo_usage").select("*").eq("promo_code_id", promoId).order("used_at", { ascending: false });
+    if (data) setUsage(data as PromoUsage[]);
+    setUsageDialog(promoId);
+  };
+
+  const getUserName = (userId: string) => {
+    const p = profiles.find(p => p.user_id === userId);
+    return p?.full_name || userId.slice(0, 8);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +102,7 @@ export function AdminPromoCodes() {
               <div className="space-y-2"><Label>Code</Label><Input value={form.code} onChange={e => setForm({...form, code: e.target.value})} placeholder="e.g. SAVE20" required /></div>
               <div className="space-y-2"><Label>Discount %</Label><Input type="number" value={form.discount_percent} onChange={e => setForm({...form, discount_percent: e.target.value})} min="1" max="100" required /></div>
               <div className="space-y-2"><Label>Min Items in Cart</Label><Input type="number" value={form.min_quantity} onChange={e => setForm({...form, min_quantity: e.target.value})} min="1" required /></div>
-              <div className="space-y-2"><Label>Max Uses (leave blank for unlimited)</Label><Input type="number" value={form.max_uses} onChange={e => setForm({...form, max_uses: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Max Uses (blank = unlimited)</Label><Input type="number" value={form.max_uses} onChange={e => setForm({...form, max_uses: e.target.value})} /></div>
               <div className="flex items-center justify-between"><Label>Active</Label><Switch checked={form.active} onCheckedChange={v => setForm({...form, active: v})} /></div>
               <Button type="submit" className="w-full">Create Promo Code</Button>
             </form>
@@ -95,12 +123,32 @@ export function AdminPromoCodes() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => fetchUsage(c.id)}>Usage</Button>
               <Button variant="ghost" size="sm" onClick={() => toggle(c.id, c.active)}>{c.active ? "Deactivate" : "Activate"}</Button>
               <Button variant="ghost" size="icon" onClick={() => remove(c.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
             </div>
           </CardContent>
         </Card>
       ))}
+
+      {/* Usage Dialog */}
+      <Dialog open={!!usageDialog} onOpenChange={() => setUsageDialog(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Promo Code Usage</DialogTitle></DialogHeader>
+          {usage.length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-4">No usage records yet.</p>
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {usage.map(u => (
+                <div key={u.id} className="flex justify-between items-center p-2 glass rounded-lg text-sm">
+                  <span className="font-medium">{getUserName(u.user_id)}</span>
+                  <span className="text-muted-foreground">{new Date(u.used_at).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
