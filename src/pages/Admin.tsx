@@ -61,6 +61,7 @@ export default function Admin() {
         <TabsContent value="events"><AdminEvents /></TabsContent>
         <TabsContent value="spins"><AdminSpinWheels /></TabsContent>
         <TabsContent value="ads"><AdminPopupAds /></TabsContent>
+        <TabsContent value="catdiscount"><AdminCategoryDiscounts /></TabsContent>
         <TabsContent value="announcements"><AdminAnnouncements /></TabsContent>
         <TabsContent value="chats"><AdminChats /></TabsContent>
         <TabsContent value="settings"><AdminSettings /></TabsContent>
