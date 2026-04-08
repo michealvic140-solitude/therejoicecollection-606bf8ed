@@ -43,6 +43,7 @@ export default function Admin() {
           <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="spins">Spin Wheel</TabsTrigger>
           <TabsTrigger value="ads">Popup Ads</TabsTrigger>
+          <TabsTrigger value="catdiscount">Category Discounts</TabsTrigger>
           <TabsTrigger value="announcements">Announcements</TabsTrigger>
           <TabsTrigger value="chats">Chats</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
