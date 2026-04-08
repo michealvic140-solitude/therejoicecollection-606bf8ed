@@ -17,6 +17,7 @@ import { AdminPromoCodes } from "@/components/admin/AdminPromoCodes";
 import { AdminCoupons } from "@/components/admin/AdminCoupons";
 import { AdminSpinWheels } from "@/components/admin/AdminSpinWheels";
 import { AdminPopupAds } from "@/components/admin/AdminPopupAds";
+import { AdminCategoryDiscounts } from "@/components/admin/AdminCategoryDiscounts";
 
 export default function Admin() {
   const { isAdmin, loading } = useAuth();
