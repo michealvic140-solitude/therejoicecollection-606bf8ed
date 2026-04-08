@@ -79,6 +79,36 @@ export type Database = {
           },
         ]
       }
+      category_discounts: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          discount_percent: number
+          ends_at: string
+          id: string
+          starts_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          discount_percent?: number
+          ends_at: string
+          id?: string
+          starts_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          discount_percent?: number
+          ends_at?: string
+          id?: string
+          starts_at?: string
+        }
+        Relationships: []
+      }
       chats: {
         Row: {
           created_at: string
@@ -105,6 +135,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      coupon_usage: {
+        Row: {
+          coupon_id: string
+          id: string
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          id?: string
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          id?: string
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usage_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coupons: {
         Row: {
@@ -419,6 +478,8 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          discount_ends_at: string | null
+          discount_percent: number | null
           id: string
           image_url: string | null
           name: string
@@ -432,6 +493,8 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          discount_ends_at?: string | null
+          discount_percent?: number | null
           id?: string
           image_url?: string | null
           name: string
@@ -445,6 +508,8 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          discount_ends_at?: string | null
+          discount_percent?: number | null
           id?: string
           image_url?: string | null
           name?: string
@@ -549,6 +614,35 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_usage: {
+        Row: {
+          id: string
+          promo_code_id: string
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          promo_code_id: string
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          promo_code_id?: string
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_usage_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           comment: string | null
@@ -649,6 +743,7 @@ export type Database = {
           active: boolean
           created_at: string
           id: string
+          max_spins_per_user: number | null
           prizes: Json
           title: string
         }
@@ -656,6 +751,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          max_spins_per_user?: number | null
           prizes?: Json
           title: string
         }
@@ -663,6 +759,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          max_spins_per_user?: number | null
           prizes?: Json
           title?: string
         }

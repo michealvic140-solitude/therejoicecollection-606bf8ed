@@ -4,7 +4,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -25,9 +25,8 @@ export function AdminNegotiations() {
     if (counterOffer) update.counter_offer = parseFloat(counterOffer);
     await supabase.from("negotiations").update(update).eq("id", neg.id);
 
-    // Send notification
     const messages: Record<string, string> = {
-      Accepted: `Your negotiation for ${neg.product_name} at ${formatPrice(neg.offered_price)} has been accepted!`,
+      Accepted: `Your negotiation for ${neg.product_name} at ${formatPrice(neg.offered_price)} has been accepted! Check your coupons.`,
       Rejected: `Your negotiation for ${neg.product_name} was rejected.`,
       "Counter Offered": `You received a counter offer for ${neg.product_name}: ${counterOffer ? formatPrice(parseFloat(counterOffer)) : ""}`,
     };
@@ -37,8 +36,62 @@ export function AdminNegotiations() {
       title: `Negotiation ${status}`,
       message: messages[status] || `Negotiation status updated to ${status}`,
       type: status === "Accepted" ? "success" : status === "Rejected" ? "error" : "info",
-      link: `/product/${neg.product_id}`,
+      link: "/profile",
     } as any);
+
+    // Auto-generate single-use coupon when accepted
+    if (status === "Accepted") {
+      const discountAmount = neg.original_price - neg.offered_price;
+      const code = `NEG-${Date.now().toString(36).toUpperCase()}`;
+      await supabase.from("coupons").insert({
+        code,
+        discount_amount: discountAmount,
+        discount_percent: 0,
+        user_id: neg.user_id,
+        for_all_users: false,
+        source: "negotiation",
+        active: true,
+        max_uses: 1,
+        min_quantity: 1,
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min expiry
+      } as any);
+
+      await supabase.from("notifications").insert({
+        user_id: neg.user_id,
+        title: "Discount Coupon Generated!",
+        message: `Use code ${code} for ₦${discountAmount.toLocaleString()} off. Valid for 30 minutes only!`,
+        type: "success",
+        link: "/profile",
+      } as any);
+    }
+
+    // Counter offer also generates a coupon
+    if (status === "Counter Offered" && counterOffer) {
+      const discountAmount = neg.original_price - parseFloat(counterOffer);
+      if (discountAmount > 0) {
+        const code = `CTR-${Date.now().toString(36).toUpperCase()}`;
+        await supabase.from("coupons").insert({
+          code,
+          discount_amount: discountAmount,
+          discount_percent: 0,
+          user_id: neg.user_id,
+          for_all_users: false,
+          source: "negotiation",
+          active: true,
+          max_uses: 1,
+          min_quantity: 1,
+          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        } as any);
+
+        await supabase.from("notifications").insert({
+          user_id: neg.user_id,
+          title: "Counter Offer Coupon",
+          message: `Use code ${code} for ₦${discountAmount.toLocaleString()} off. Valid for 30 minutes!`,
+          type: "info",
+          link: "/profile",
+        } as any);
+      }
+    }
 
     toast.success("Updated");
     fetchAll();

@@ -209,13 +209,17 @@ export default function Cart() {
       delivery_city: deliveryMethod === "delivery" ? address.city : "",
     } as any);
 
-    // Increment coupon/promo usage
+    // Increment coupon/promo usage and track
     if (selectedCoupon) {
       await supabase.from("coupons").update({ used_count: selectedCoupon.used_count + 1 } as any).eq("id", selectedCoupon.id);
+      await supabase.from("coupon_usage").insert({ coupon_id: selectedCoupon.id, user_id: user.id } as any);
     }
     if (promoApplied && promoCode) {
-      const { data: pc } = await supabase.from("promo_codes").select("used_count").eq("code", promoCode.toUpperCase()).single();
-      if (pc) await supabase.from("promo_codes").update({ used_count: (pc.used_count || 0) + 1 } as any).eq("code", promoCode.toUpperCase());
+      const { data: pc } = await supabase.from("promo_codes").select("id, used_count").eq("code", promoCode.toUpperCase()).single();
+      if (pc) {
+        await supabase.from("promo_codes").update({ used_count: (pc.used_count || 0) + 1 } as any).eq("code", promoCode.toUpperCase());
+        await supabase.from("promo_usage").insert({ promo_code_id: pc.id, user_id: user.id } as any);
+      }
     }
 
     setUploading(false);

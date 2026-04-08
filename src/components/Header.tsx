@@ -24,12 +24,19 @@ export function Header() {
   const { itemCount } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [banner, setBanner] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
-    supabase.from("settings").select("value").eq("key", "banner").single()
-      .then(({ data }) => { if (data) setBanner(data.value); });
+    supabase.from("settings").select("*").then(({ data }) => {
+      if (data) {
+        data.forEach(s => {
+          if (s.key === "banner") setBanner(s.value);
+          if (s.key === "logo_url") setLogoUrl(s.value);
+        });
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -65,94 +72,108 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 glass-strong border-b border-border/50">
+    <header className="sticky top-0 z-50">
+      {/* Top banner with background image */}
       {banner && (
-        <div className="gradient-gold text-primary-foreground text-center text-xs py-1.5 px-4 font-medium tracking-wider">
-          {banner}
+        <div className="relative overflow-hidden">
+          {/* Background image - luxury store interior */}
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-100/80 via-cyan-50/60 to-amber-100/80" />
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNMCAwaDQwdjQwSDB6IiBmaWxsPSJyZ2JhKDAsIDAsIDAsIDAuMDIpIi8+PC9zdmc+')] opacity-30" />
+          <div className="relative gradient-gold text-primary-foreground text-center text-sm py-2.5 px-4 font-medium tracking-widest uppercase">
+            {banner}
+          </div>
         </div>
       )}
-      <div className="container flex items-center justify-between h-16 px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center shadow-lg shadow-gold/20">
-            <span className="font-display text-xs font-bold text-primary-foreground">TRC</span>
+
+      {/* Main nav bar */}
+      <div className="bg-gradient-to-r from-[hsl(0,0%,5%)] via-[hsl(0,0%,8%)] to-[hsl(0,0%,5%)] border-b border-gold/20">
+        <div className="container flex items-center justify-between h-16 px-4">
+          <Link to="/" className="flex items-center gap-3">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="h-12 w-12 rounded-full object-cover shadow-lg shadow-gold/20 border-2 border-gold/30" />
+            ) : (
+              <div className="w-12 h-12 rounded-full gradient-gold flex items-center justify-center shadow-lg shadow-gold/20 border-2 border-gold/30">
+                <span className="font-display text-sm font-bold text-primary-foreground">TRC</span>
+              </div>
+            )}
+            <span className="font-display text-lg font-bold tracking-tight hidden sm:block text-gradient-gold">The Rejoice Collection</span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+            <Link to="/" className="text-gold hover:text-gold/80 transition-colors font-semibold tracking-wide">Home</Link>
+            <Link to="/shop" className="text-gold hover:text-gold/80 transition-colors font-semibold tracking-wide">Shop</Link>
+            {user && <Link to="/orders" className="text-foreground hover:text-gold transition-colors tracking-wide">Orders</Link>}
+            {user && <Link to="/chat" className="text-foreground hover:text-gold transition-colors flex items-center gap-1.5 tracking-wide"><MessageCircle className="h-4 w-4" />Support</Link>}
+            {isAdmin && <Link to="/admin" className="text-gold font-semibold flex items-center gap-1"><Crown className="h-4 w-4" />Admin</Link>}
+          </nav>
+
+          <div className="flex items-center gap-1.5">
+            {user && (
+              <>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="relative p-2 hover:bg-gold/10 rounded-md transition-colors">
+                      <Bell className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0 glass-strong border-border/50" align="end">
+                    <div className="flex items-center justify-between p-3 border-b border-border/50">
+                      <h4 className="font-semibold text-sm">Notifications</h4>
+                      {unreadCount > 0 && (
+                        <Button variant="ghost" size="sm" className="text-xs h-7" onClick={markAllRead}>Mark all read</Button>
+                      )}
+                    </div>
+                    <ScrollArea className="h-64">
+                      {notifications.length === 0 ? (
+                        <p className="text-center text-sm text-muted-foreground py-8">No notifications</p>
+                      ) : (
+                        notifications.map(n => (
+                          <Link key={n.id} to={n.link || "#"} className={`block p-3 border-b border-border/50 hover:bg-muted/30 transition-colors ${!n.read ? "bg-gold/5" : ""}`}>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm ${!n.read ? "font-semibold" : ""}`}>{n.title}</p>
+                              <p className="text-xs text-muted-foreground truncate">{n.message}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {new Date(n.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </Link>
+                        ))
+                      )}
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
+
+                <Link to="/cart" className="relative p-2 hover:bg-gold/10 rounded-md transition-colors">
+                  <ShoppingCart className="h-5 w-5" />
+                  {itemCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 gradient-gold text-primary-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
+                      {itemCount}
+                    </span>
+                  )}
+                </Link>
+                <Link to="/profile" className="p-2 hover:bg-gold/10 rounded-md transition-colors">
+                  <User className="h-5 w-5" />
+                </Link>
+                <Button variant="ghost" size="sm" onClick={signOut} className="hidden md:inline-flex hover:text-gold font-semibold">
+                  Logout
+                </Button>
+              </>
+            )}
+            {!user && (
+              <div className="flex items-center gap-2">
+                <Link to="/login"><Button variant="ghost" size="sm" className="hover:text-gold">Login</Button></Link>
+                <Link to="/register"><Button size="sm" className="gradient-gold text-primary-foreground">Sign Up</Button></Link>
+              </div>
+            )}
+            <button className="md:hidden p-2" onClick={() => setMobileOpen(!mobileOpen)}>
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
-          <span className="font-display text-lg font-bold tracking-tight hidden sm:block">The Rejoice Collection</span>
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-          <Link to="/" className="hover:text-gold transition-colors">Home</Link>
-          <Link to="/shop" className="hover:text-gold transition-colors">Shop</Link>
-          {user && <Link to="/orders" className="hover:text-gold transition-colors">Orders</Link>}
-          {user && <Link to="/chat" className="hover:text-gold transition-colors flex items-center gap-1"><MessageCircle className="h-4 w-4" />Support</Link>}
-          {isAdmin && <Link to="/admin" className="hover:text-gold transition-colors text-gold font-semibold flex items-center gap-1"><Crown className="h-4 w-4" />Admin</Link>}
-        </nav>
-
-        <div className="flex items-center gap-2">
-          {user && (
-            <>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="relative p-2 hover:bg-muted/50 rounded-md transition-colors">
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0 glass-strong border-border/50" align="end">
-                  <div className="flex items-center justify-between p-3 border-b border-border/50">
-                    <h4 className="font-semibold text-sm">Notifications</h4>
-                    {unreadCount > 0 && (
-                      <Button variant="ghost" size="sm" className="text-xs h-7" onClick={markAllRead}>Mark all read</Button>
-                    )}
-                  </div>
-                  <ScrollArea className="h-64">
-                    {notifications.length === 0 ? (
-                      <p className="text-center text-sm text-muted-foreground py-8">No notifications</p>
-                    ) : (
-                      notifications.map(n => (
-                        <Link key={n.id} to={n.link || "#"} className={`block p-3 border-b border-border/50 hover:bg-muted/30 transition-colors ${!n.read ? "bg-gold/5" : ""}`}>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm ${!n.read ? "font-semibold" : ""}`}>{n.title}</p>
-                            <p className="text-xs text-muted-foreground truncate">{n.message}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {new Date(n.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </Link>
-                      ))
-                    )}
-                  </ScrollArea>
-                </PopoverContent>
-              </Popover>
-
-              <Link to="/cart" className="relative p-2 hover:bg-muted/50 rounded-md transition-colors">
-                <ShoppingCart className="h-5 w-5" />
-                {itemCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 gradient-gold text-primary-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
-                    {itemCount}
-                  </span>
-                )}
-              </Link>
-              <Link to="/profile" className="p-2 hover:bg-muted/50 rounded-md transition-colors">
-                <User className="h-5 w-5" />
-              </Link>
-              <Button variant="ghost" size="sm" onClick={signOut} className="hidden md:inline-flex hover:text-gold">
-                Logout
-              </Button>
-            </>
-          )}
-          {!user && (
-            <div className="flex items-center gap-2">
-              <Link to="/login"><Button variant="ghost" size="sm">Login</Button></Link>
-              <Link to="/register"><Button size="sm" className="gradient-gold text-primary-foreground">Sign Up</Button></Link>
-            </div>
-          )}
-          <button className="md:hidden p-2" onClick={() => setMobileOpen(!mobileOpen)}>
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
         </div>
       </div>
 

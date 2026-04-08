@@ -25,6 +25,12 @@ interface CountdownEvent {
   active: boolean;
 }
 
+interface CategoryDiscount {
+  category: string;
+  discount_percent: number;
+  ends_at: string;
+}
+
 function CountdownTimer({ endsAt }: { endsAt: string }) {
   const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
@@ -42,16 +48,14 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
     return () => clearInterval(interval);
   }, [endsAt]);
 
-  const blocks = [
-    { label: "DAYS", value: time.days },
-    { label: "HRS", value: time.hours },
-    { label: "MIN", value: time.minutes },
-    { label: "SEC", value: time.seconds },
-  ];
-
   return (
     <div className="flex gap-3 justify-center">
-      {blocks.map(b => (
+      {[
+        { label: "DAYS", value: time.days },
+        { label: "HRS", value: time.hours },
+        { label: "MIN", value: time.minutes },
+        { label: "SEC", value: time.seconds },
+      ].map(b => (
         <div key={b.label} className="glass rounded-xl px-4 py-3 text-center min-w-[70px]">
           <div className="font-display text-3xl md:text-4xl font-bold text-gold">
             {String(b.value).padStart(2, "0")}
@@ -72,18 +76,15 @@ const tagColors: Record<string, string> = {
 };
 
 const categoryIcons: Record<string, typeof Watch> = {
-  watches: Watch,
-  bags: ShoppingBag,
-  jewelry: Gem,
-  accessories: Sparkles,
-  footwear: Footprints,
-  clothes: Shirt,
+  watches: Watch, bags: ShoppingBag, jewelry: Gem,
+  accessories: Sparkles, footwear: Footprints, clothes: Shirt,
 };
 
 export default function Index() {
   const [products, setProducts] = useState<Product[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [event, setEvent] = useState<CountdownEvent | null>(null);
+  const [categoryDiscounts, setCategoryDiscounts] = useState<CategoryDiscount[]>([]);
   const { addToCart } = useCart();
   const { user } = useAuth();
 
@@ -100,6 +101,12 @@ export default function Index() {
         if (new Date(ev.ends_at) > new Date()) setEvent(ev);
       }
     });
+    supabase.from("category_discounts").select("*").eq("active", true).then(({ data }) => {
+      if (data) {
+        const active = (data as CategoryDiscount[]).filter(d => new Date(d.ends_at) > new Date());
+        setCategoryDiscounts(active);
+      }
+    });
   }, []);
 
   const handleAddToCart = async (id: string) => {
@@ -108,13 +115,15 @@ export default function Index() {
     toast.success("Added to cart!");
   };
 
+  const getCategoryDiscount = (category: string) => {
+    const d = categoryDiscounts.find(cd => cd.category === category);
+    return d?.discount_percent || 0;
+  };
+
   const categories = [
-    { name: "watches", icon: Watch },
-    { name: "bags", icon: ShoppingBag },
-    { name: "jewelry", icon: Gem },
-    { name: "accessories", icon: Sparkles },
-    { name: "footwear", icon: Footprints },
-    { name: "clothes", icon: Shirt },
+    { name: "watches", icon: Watch }, { name: "bags", icon: ShoppingBag },
+    { name: "jewelry", icon: Gem }, { name: "accessories", icon: Sparkles },
+    { name: "footwear", icon: Footprints }, { name: "clothes", icon: Shirt },
   ];
 
   return (
@@ -125,8 +134,17 @@ export default function Index() {
       {/* Countdown Event Banner */}
       {event && (
         <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-gold/20 via-gold/10 to-transparent" />
-          <div className="absolute inset-0 glass" />
+          {event.image_url ? (
+            <div className="absolute inset-0">
+              <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            </div>
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-r from-gold/20 via-gold/10 to-transparent" />
+              <div className="absolute inset-0 glass" />
+            </>
+          )}
           <div className="relative container px-4 py-8 md:py-12">
             <div className="max-w-3xl mx-auto text-center space-y-4">
               <div className="flex justify-center">
@@ -143,9 +161,9 @@ export default function Index() {
                 </div>
               )}
               <CountdownTimer endsAt={event.ends_at} />
-              {event.image_url && (
-                <img src={event.image_url} alt={event.title} className="mx-auto max-h-40 rounded-xl shadow-2xl mt-4" />
-              )}
+              <Link to={event.promo_code ? `/shop` : "/shop"}>
+                <Button className="gradient-gold text-primary-foreground gap-2 mt-4">Shop Now <ArrowRight className="h-4 w-4" /></Button>
+              </Link>
             </div>
           </div>
         </section>
@@ -230,9 +248,13 @@ export default function Index() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {categories.map(cat => {
             const IconComp = cat.icon;
+            const discount = getCategoryDiscount(cat.name);
             return (
               <Link key={cat.name} to={`/shop?category=${cat.name}`}>
-                <div className="group glass-card rounded-2xl p-6 text-center cursor-pointer hover:scale-105 hover:shadow-[0_16px_48px_hsla(40,70%,50%,0.15)] transition-all duration-500">
+                <div className="group glass-card rounded-2xl p-6 text-center cursor-pointer hover:scale-105 hover:shadow-[0_16px_48px_hsla(40,70%,50%,0.15)] transition-all duration-500 relative">
+                  {discount > 0 && (
+                    <Badge className="absolute top-2 right-2 gradient-gold text-primary-foreground text-[10px]">-{discount}%</Badge>
+                  )}
                   <div className="w-14 h-14 mx-auto rounded-full bg-gold/10 flex items-center justify-center mb-3 group-hover:bg-gold/20 transition-colors">
                     <IconComp className="h-7 w-7 text-gold" />
                   </div>
@@ -252,7 +274,9 @@ export default function Index() {
             <Link to="/shop"><Button variant="outline" className="gap-1 glass border-gold/20 hover:bg-gold/10">View All <ArrowRight className="h-4 w-4" /></Button></Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map(p => <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} />)}
+            {products.map(p => (
+              <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} categoryDiscount={getCategoryDiscount(p.category)} />
+            ))}
           </div>
         </div>
       </section>
@@ -267,13 +291,13 @@ export default function Index() {
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">
               <p className="text-muted-foreground leading-relaxed">
-                Welcome to <strong className="text-foreground">The Rejoice Collection</strong> — Nigeria's premier destination for luxury fashion and accessories. We believe that everyone deserves to experience the finest quality products at accessible prices.
+                Welcome to <strong className="text-foreground">The Rejoice Collection</strong> — Nigeria's premier destination for luxury fashion and accessories.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                Our carefully curated collection features authentic watches, designer bags, exquisite jewelry, premium footwear, and stylish accessories sourced from trusted global suppliers. Every product undergoes rigorous quality checks to ensure you receive nothing but the best.
+                Our carefully curated collection features authentic watches, designer bags, exquisite jewelry, premium footwear, and stylish accessories sourced from trusted global suppliers.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                With nationwide delivery, secure payment processing, and dedicated customer support, we're committed to making your shopping experience seamless and enjoyable. Join thousands of satisfied customers who trust The Rejoice Collection for their luxury needs.
+                With nationwide delivery, secure payment processing, and dedicated customer support, we're committed to making your shopping experience seamless and enjoyable.
               </p>
               <div className="flex gap-6 pt-4">
                 {[

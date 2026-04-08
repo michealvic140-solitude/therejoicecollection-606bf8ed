@@ -18,6 +18,7 @@ interface SpinWheel {
   title: string;
   active: boolean;
   prizes: Prize[];
+  max_spins_per_user: number;
   created_at: string;
 }
 
@@ -25,11 +26,12 @@ export function AdminSpinWheels() {
   const [wheels, setWheels] = useState<SpinWheel[]>([]);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [maxSpins, setMaxSpins] = useState("1");
   const [prizes, setPrizes] = useState<Prize[]>([{ name: "", type: "product", value: "" }]);
 
   const fetch = async () => {
     const { data } = await supabase.from("spin_wheels").select("*").order("created_at", { ascending: false });
-    if (data) setWheels(data.map(w => ({ ...w, prizes: (w.prizes as any[] || []) })) as SpinWheel[]);
+    if (data) setWheels(data.map(w => ({ ...w, prizes: (w.prizes as any[] || []), max_spins_per_user: (w as any).max_spins_per_user || 1 })) as SpinWheel[]);
   };
 
   useEffect(() => { fetch(); }, []);
@@ -46,11 +48,15 @@ export function AdminSpinWheels() {
     e.preventDefault();
     const validPrizes = prizes.filter(p => p.name.trim());
     if (validPrizes.length < 2) { toast.error("Add at least 2 prizes"); return; }
-    const { error } = await supabase.from("spin_wheels").insert({ title, prizes: validPrizes, active: true } as any);
+    const { error } = await supabase.from("spin_wheels").insert({
+      title, prizes: validPrizes, active: true,
+      max_spins_per_user: parseInt(maxSpins) || 1,
+    } as any);
     if (error) { toast.error("Failed: " + error.message); return; }
     toast.success("Spin wheel created!");
     setOpen(false);
     setTitle("");
+    setMaxSpins("1");
     setPrizes([{ name: "", type: "product", value: "" }]);
     fetch();
   };
@@ -78,6 +84,7 @@ export function AdminSpinWheels() {
             <DialogHeader><DialogTitle className="font-display">New Spin Wheel</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2"><Label>Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Lucky Spin!" required /></div>
+              <div className="space-y-2"><Label>Max Spins Per User</Label><Input type="number" value={maxSpins} onChange={e => setMaxSpins(e.target.value)} min="1" max="100" /></div>
               <div className="space-y-3">
                 <Label>Prizes (min 2)</Label>
                 {prizes.map((p, i) => (
@@ -115,6 +122,7 @@ export function AdminSpinWheels() {
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">{w.title}</h3>
                 <Badge variant={w.active ? "default" : "destructive"}>{w.active ? "Active" : "Inactive"}</Badge>
+                <Badge variant="secondary">{w.max_spins_per_user} spin{w.max_spins_per_user > 1 ? "s" : ""}/user</Badge>
               </div>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => toggle(w.id, w.active)}>{w.active ? "Deactivate" : "Activate"}</Button>

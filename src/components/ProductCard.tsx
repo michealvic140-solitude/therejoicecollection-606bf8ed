@@ -10,9 +10,17 @@ type Product = Tables<"products">;
 interface ProductCardProps {
   product: Product;
   onAddToCart?: (id: string) => void;
+  categoryDiscount?: number;
 }
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart, categoryDiscount }: ProductCardProps) {
+  const productDiscount = (product as any).discount_percent || 0;
+  const discountEndsAt = (product as any).discount_ends_at;
+  const productDiscountActive = productDiscount > 0 && (!discountEndsAt || new Date(discountEndsAt) > new Date());
+  const effectiveDiscount = productDiscountActive ? productDiscount : (categoryDiscount || 0);
+  const hasDiscount = effectiveDiscount > 0;
+  const discountedPrice = hasDiscount ? product.price * (1 - effectiveDiscount / 100) : product.price;
+
   return (
     <div className="group glass-card rounded-2xl overflow-hidden hover:scale-[1.02] transition-all duration-500 hover:shadow-[0_16px_48px_hsla(40,70%,50%,0.15)]">
       <Link to={`/product/${product.id}`}>
@@ -28,6 +36,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               <Badge variant="destructive" className="shadow-lg">Out of Stock</Badge>
             </div>
           )}
+          {hasDiscount && !product.out_of_stock && (
+            <div className="absolute top-3 left-3">
+              <Badge className="gradient-gold text-primary-foreground shadow-lg text-sm px-2">-{effectiveDiscount}%</Badge>
+            </div>
+          )}
         </div>
       </Link>
       <div className="p-4 space-y-3">
@@ -40,7 +53,16 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <p className="text-sm text-muted-foreground capitalize mt-0.5">{product.category}</p>
         </div>
         <div className="flex items-center justify-between pt-1">
-          <span className="text-xl font-bold text-gradient-gold">{formatPrice(product.price)}</span>
+          <div>
+            {hasDiscount ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-gradient-gold">{formatPrice(discountedPrice)}</span>
+                <span className="text-sm text-muted-foreground line-through">{formatPrice(product.price)}</span>
+              </div>
+            ) : (
+              <span className="text-xl font-bold text-gradient-gold">{formatPrice(product.price)}</span>
+            )}
+          </div>
           {onAddToCart && !product.out_of_stock && (
             <Button size="sm" onClick={() => onAddToCart(product.id)} className="gap-1.5 gradient-gold text-primary-foreground hover:opacity-90 border-0 shadow-lg shadow-gold/20">
               <ShoppingCart className="h-4 w-4" /> Add
