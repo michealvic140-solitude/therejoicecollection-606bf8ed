@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { useCart } from "@/contexts/CartContext";
@@ -20,7 +20,8 @@ export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get("category") || "all";
   const { addToCart } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.from("products").select("*").eq("visible", true).order("created_at", { ascending: false })
@@ -37,6 +38,33 @@ export default function Shop() {
     if (!user) { toast.error("Please sign in to add items to cart"); return; }
     await addToCart(id);
     toast.success("Added to cart!");
+  };
+
+  const handleBuyNow = async (id: string) => {
+    if (!user) { toast.error("Please sign in first"); navigate("/login"); return; }
+    if (!profile?.address) {
+      toast.error("Please set up your delivery address in your profile first");
+      navigate("/profile");
+      return;
+    }
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+
+    const { error } = await supabase.from("orders").insert({
+      user_id: user.id,
+      user_name: profile.full_name,
+      items: [{ productId: product.id, name: product.name, price: product.price, quantity: 1 }],
+      total: product.price,
+      status: "Pending Payment",
+      delivery_method: "delivery",
+      delivery_address: profile.address || "",
+      delivery_state: (profile as any).state || "",
+      delivery_city: (profile as any).city || "",
+    } as any);
+
+    if (error) { toast.error("Failed to place order"); return; }
+    toast.success("Express order placed! Complete payment in Orders.");
+    navigate("/orders");
   };
 
   return (
@@ -60,7 +88,14 @@ export default function Shop() {
         <div className="text-center py-20 text-muted-foreground"><p className="text-lg">No products found</p></div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filtered.map(p => <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} />)}
+          {filtered.map(p => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              onAddToCart={handleAddToCart}
+              onBuyNow={user && profile?.address ? handleBuyNow : undefined}
+            />
+          ))}
         </div>
       )}
     </div>
