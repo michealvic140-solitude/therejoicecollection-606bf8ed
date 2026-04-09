@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { useCart } from "@/contexts/CartContext";
@@ -86,7 +86,8 @@ export default function Index() {
   const [event, setEvent] = useState<CountdownEvent | null>(null);
   const [categoryDiscounts, setCategoryDiscounts] = useState<CategoryDiscount[]>([]);
   const { addToCart } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.from("products").select("*").eq("visible", true).eq("out_of_stock", false).limit(8).order("created_at", { ascending: false }).then(({ data }) => {
