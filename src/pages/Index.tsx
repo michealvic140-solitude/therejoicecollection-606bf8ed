@@ -116,6 +116,31 @@ export default function Index() {
     toast.success("Added to cart!");
   };
 
+  const handleBuyNow = async (id: string) => {
+    if (!user) { toast.error("Please sign in first"); navigate("/login"); return; }
+    if (!profile?.address) {
+      toast.error("Please set up your delivery address first");
+      navigate("/profile");
+      return;
+    }
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+    const { error } = await supabase.from("orders").insert({
+      user_id: user.id,
+      user_name: profile.full_name,
+      items: [{ productId: product.id, name: product.name, price: product.price, quantity: 1 }],
+      total: product.price,
+      status: "Pending Payment",
+      delivery_method: "delivery",
+      delivery_address: profile.address || "",
+      delivery_state: (profile as any).state || "",
+      delivery_city: (profile as any).city || "",
+    } as any);
+    if (error) { toast.error("Failed to place order"); return; }
+    toast.success("Express order placed!");
+    navigate("/orders");
+  };
+
   const getCategoryDiscount = (category: string) => {
     const d = categoryDiscounts.find(cd => cd.category === category);
     return d?.discount_percent || 0;
