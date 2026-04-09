@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Header } from "./Header";
+import { AIConcierge } from "./AIConcierge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertTriangle, Phone, Mail, MessageCircle } from "lucide-react";
@@ -8,7 +9,7 @@ import { AlertTriangle, Phone, Mail, MessageCircle } from "lucide-react";
 export function Layout() {
   const [contacts, setContacts] = useState<Record<string, string>>({});
   const [maintenance, setMaintenance] = useState(false);
-  const { isAdmin, profile } = useAuth();
+  const { isAdmin, profile, user } = useAuth();
 
   useEffect(() => {
     supabase.from("settings").select("*").then(({ data }) => {
@@ -63,6 +64,10 @@ export function Layout() {
       <main className="flex-1">
         <Outlet />
       </main>
+
+      {/* AI Concierge - only for logged-in users */}
+      {user && <AIConcierge />}
+
       <footer className="border-t border-border/50 glass">
         <div className="container px-4 py-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

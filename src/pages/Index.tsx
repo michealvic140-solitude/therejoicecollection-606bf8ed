@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { useCart } from "@/contexts/CartContext";
@@ -86,7 +86,8 @@ export default function Index() {
   const [event, setEvent] = useState<CountdownEvent | null>(null);
   const [categoryDiscounts, setCategoryDiscounts] = useState<CategoryDiscount[]>([]);
   const { addToCart } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.from("products").select("*").eq("visible", true).eq("out_of_stock", false).limit(8).order("created_at", { ascending: false }).then(({ data }) => {
@@ -113,6 +114,31 @@ export default function Index() {
     if (!user) { toast.error("Please sign in to add items to cart"); return; }
     await addToCart(id);
     toast.success("Added to cart!");
+  };
+
+  const handleBuyNow = async (id: string) => {
+    if (!user) { toast.error("Please sign in first"); navigate("/login"); return; }
+    if (!profile?.address) {
+      toast.error("Please set up your delivery address first");
+      navigate("/profile");
+      return;
+    }
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+    const { error } = await supabase.from("orders").insert({
+      user_id: user.id,
+      user_name: profile.full_name,
+      items: [{ productId: product.id, name: product.name, price: product.price, quantity: 1 }],
+      total: product.price,
+      status: "Pending Payment",
+      delivery_method: "delivery",
+      delivery_address: profile.address || "",
+      delivery_state: (profile as any).state || "",
+      delivery_city: (profile as any).city || "",
+    } as any);
+    if (error) { toast.error("Failed to place order"); return; }
+    toast.success("Express order placed!");
+    navigate("/orders");
   };
 
   const getCategoryDiscount = (category: string) => {
@@ -275,7 +301,7 @@ export default function Index() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map(p => (
-              <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} categoryDiscount={getCategoryDiscount(p.category)} />
+              <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} onBuyNow={user && profile?.address ? handleBuyNow : undefined} categoryDiscount={getCategoryDiscount(p.category)} />
             ))}
           </div>
         </div>
