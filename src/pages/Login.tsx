@@ -95,9 +95,12 @@ export default function Login() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <p className="text-center text-sm text-muted-foreground">
-            Don't have an account? <Link to="/register" className="text-gold font-medium hover:underline">Sign up</Link>
-          </p>
+          <div className="text-center space-y-2">
+            <Link to="/forgot-password" className="text-sm text-gold font-medium hover:underline block">Forgot password?</Link>
+            <p className="text-sm text-muted-foreground">
+              Don't have an account? <Link to="/register" className="text-gold font-medium hover:underline">Sign up</Link>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

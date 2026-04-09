@@ -20,7 +20,7 @@ interface Notification {
 }
 
 export function Header() {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, profile, signOut } = useAuth();
   const { itemCount } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [banner, setBanner] = useState("");
@@ -102,6 +102,11 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             <Link to="/" className="text-gold hover:text-gold/80 transition-colors font-semibold tracking-wide">Home</Link>
             <Link to="/shop" className="text-gold hover:text-gold/80 transition-colors font-semibold tracking-wide">Shop</Link>
+            {user && profile?.badge === "VVIP" && (
+              <Link to="/vault" className="text-gold hover:text-gold/80 transition-colors font-semibold tracking-wide flex items-center gap-1">
+                <Crown className="h-4 w-4" />The Vault
+              </Link>
+            )}
             {user && <Link to="/orders" className="text-foreground hover:text-gold transition-colors tracking-wide">Orders</Link>}
             {user && <Link to="/chat" className="text-foreground hover:text-gold transition-colors flex items-center gap-1.5 tracking-wide"><MessageCircle className="h-4 w-4" />Support</Link>}
             {isAdmin && <Link to="/admin" className="text-gold font-semibold flex items-center gap-1"><Crown className="h-4 w-4" />Admin</Link>}
@@ -181,6 +186,7 @@ export function Header() {
         <div className="md:hidden border-t border-border/50 glass-strong p-4 space-y-3 animate-fade-in">
           <Link to="/" className="block py-2 hover:text-gold" onClick={() => setMobileOpen(false)}>Home</Link>
           <Link to="/shop" className="block py-2 hover:text-gold" onClick={() => setMobileOpen(false)}>Shop</Link>
+          {user && profile?.badge === "VVIP" && <Link to="/vault" className="block py-2 text-gold font-semibold" onClick={() => setMobileOpen(false)}>🔒 The Vault</Link>}
           {user && <Link to="/orders" className="block py-2 hover:text-gold" onClick={() => setMobileOpen(false)}>My Orders</Link>}
           {user && <Link to="/chat" className="block py-2 hover:text-gold" onClick={() => setMobileOpen(false)}>Support Chat</Link>}
           {isAdmin && <Link to="/admin" className="block py-2 text-gold font-semibold" onClick={() => setMobileOpen(false)}>Admin Panel</Link>}
