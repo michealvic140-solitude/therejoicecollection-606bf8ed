@@ -301,7 +301,7 @@ export default function Index() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map(p => (
-              <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} categoryDiscount={getCategoryDiscount(p.category)} />
+              <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} onBuyNow={user && profile?.address ? handleBuyNow : undefined} categoryDiscount={getCategoryDiscount(p.category)} />
             ))}
           </div>
         </div>
